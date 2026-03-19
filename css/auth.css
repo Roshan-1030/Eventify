@@ -1,0 +1,74 @@
+.login-container {
+    width: 100%;
+    max-width: 450px;
+    margin: 0;
+    padding: 2.5rem !important;
+    background: var(--card-bg);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 32px;
+    animation: slideIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: var(--premium-shadow);
+}
+
+.login-container .logo {
+    margin-bottom: 0.15rem !important;
+    font-size: 1.8rem !important;
+    margin-top: 0;
+}
+
+.login-container p {
+    margin-bottom: 0.5rem !important;
+    font-size: 0.85rem;
+}
+
+.login-container .form-group {
+    margin-bottom: 0.6rem;
+    text-align: left;
+}
+
+.login-container .form-control {
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+    height: auto;
+}
+
+.login-container label {
+    font-size: 0.75rem;
+    margin-bottom: 0.1rem;
+    display: block;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.login-container .btn {
+    padding: 0.9rem;
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+
+.login-container .mt-4 {
+    margin-top: 0.5rem !important;
+}
+
+.auth-page-wrapper {
+    padding: 1rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+    .login-container {
+        padding: 1rem !important;
+        margin: 5px auto;
+        width: 95%;
+    }
+    
+    .login-container .flex.gap-2 {
+        gap: 0.5rem;
+    }
+}

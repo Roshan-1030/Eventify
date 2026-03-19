@@ -1,0 +1,39 @@
+/* Event Feedback Styling */
+.feedback-item {
+    padding: 1.8rem;
+    background: var(--card-bg);
+    border-radius: 24px;
+    margin-bottom: 1.5rem;
+    border: 1.5px solid var(--border);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: var(--glass-shadow);
+}
+
+.feedback-item:hover {
+    transform: translateY(-8px) scale(1.01);
+    background: white;
+    border-color: var(--primary);
+    box-shadow: var(--premium-shadow);
+}
+
+.feedback-item:last-child {
+    margin-bottom: 0;
+}
+
+.feedback-item strong {
+    color: var(--text-primary);
+}
+
+.feedback-item p {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .feedback-item .flex.justify-between {
+        flex-direction: row;
+        align-items: center;
+        gap: 0;
+    }
+}
