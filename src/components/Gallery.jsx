@@ -95,7 +95,19 @@ const Gallery = () => {
                         <p className="text-secondary">No photo folders in this room yet.</p>
                     ) : (
                         roomFolders.map(f => (
-                            <div key={f.id} className="glass-panel text-center" style={{ cursor: 'pointer' }} onClick={() => window.location.hash = `#gallery?folder=${f.id}`}>
+                            <div key={f.id} className="glass-panel text-center" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => window.location.hash = `#gallery?folder=${f.id}`}>
+                                {state.user.role === 'admin' && (
+                                    <button className="btn btn-sm btn-outline" style={{ position: 'absolute', top: '10px', right: '10px', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem', zIndex: 10 }} onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm(`Delete folder "${f.name}" and all its photos?`)) {
+                                            setState(prev => ({
+                                                ...prev,
+                                                folders: prev.folders.filter(folder => folder.id !== f.id),
+                                                gallery: prev.gallery.filter(img => img.folderId !== f.id)
+                                            }));
+                                        }
+                                    }}>Delete</button>
+                                )}
                                 <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>📁</span>
                                 <h3>{f.name}</h3>
                                 <p>{(state.gallery || []).filter(g => g.folderId === f.id).length} Photos</p>

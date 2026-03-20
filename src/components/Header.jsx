@@ -83,7 +83,7 @@ const Header = () => {
                             {isProfileOpen && (
                                 <div id="profile-dropdown" className="glass-panel" style={{ display: 'block', position: 'absolute', top: '100%', right: 0, minWidth: '200px', zIndex: 1000, padding: '0.5rem 0', marginTop: '1rem', border: '2px solid var(--text-primary)' }}>
                                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                        <li><div className="dropdown-item" style={{ pointerEvents: 'none', opacity: 0.6, fontSize: '0.75rem' }}>Logged in as {state.user.email}</div></li>
+                                        <li><Link to="/profile" className="dropdown-item" onClick={closeAll}>👤 View Profile</Link></li>
                                         <li><hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '0.5rem 0' }} /></li>
                                         <li><button className="dropdown-item" onClick={() => { logout(); closeAll(); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 'inherit', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             🚪 Sign Out

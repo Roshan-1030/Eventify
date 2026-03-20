@@ -18,6 +18,7 @@ import Groups from './components/Groups';
 import About from './components/About';
 import Contact from './components/Contact';
 import EventDetails from './components/EventDetails';
+import Profile from './components/Profile';
 
 // Protected Route Wrapper
 const AuthGuard = ({ children }) => {
@@ -69,6 +70,7 @@ const App = () => {
                 <Route path="/polls" element={<AuthGuard><Layout><Polls /></Layout></AuthGuard>} />
                 <Route path="/groups" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
                 <Route path="/event/:id" element={<AuthGuard><Layout><EventDetails /></Layout></AuthGuard>} />
+                <Route path="/profile" element={<AuthGuard><Layout><Profile /></Layout></AuthGuard>} />
 
                 {/* Redirect any legacy hash-links manually if they exist, or just fallback to root */}
                 <Route path="*" element={<Navigate to="/" />} />

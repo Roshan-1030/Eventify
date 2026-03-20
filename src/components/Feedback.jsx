@@ -60,13 +60,22 @@ const Feedback = () => {
                             <p className="text-secondary">No feedback submitted in this room yet.</p>
                         ) : (
                             roomFeedbacks.map(f => (
-                                <div key={f.id} className="feedback-item" style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                    <div className="flex justify-between mb-1">
-                                        <strong>{f.author} <span className={`badge badge-${f.role}`} style={{ marginLeft: '8px', fontSize: '0.65rem' }}>{f.role}</span></strong>
-                                        <small className="text-secondary">{new Date(f.date).toLocaleDateString()}</small>
+                                    <div key={f.id} className="feedback-item" style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+                                        <div className="flex justify-between mb-1">
+                                            <strong>{f.author} <span className={`badge badge-${f.role}`} style={{ marginLeft: '8px', fontSize: '0.65rem' }}>{f.role}</span></strong>
+                                            <div className="flex items-center gap-2">
+                                                <small className="text-secondary">{new Date(f.date).toLocaleDateString()}</small>
+                                                {state.user.role === 'admin' && (
+                                                    <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem' }} onClick={() => {
+                                                        if(window.confirm('Delete this feedback?')) {
+                                                            setState(prev => ({ ...prev, feedbacks: prev.feedbacks.filter(item => item.id !== f.id) }));
+                                                        }
+                                                    }}>Delete</button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p style={{ margin: 0 }}>{f.content}</p>
                                     </div>
-                                    <p style={{ margin: 0 }}>{f.content}</p>
-                                </div>
                             ))
                         )}
                     </div>

@@ -5,10 +5,15 @@ const Chat = () => {
     const { state, setState } = useAppState();
     const [inputText, setInputText] = useState('');
     const chatHistoryRef = useRef(null);
-
+    
+    // Find room-specific data to see if chat is muted
+    // We'll store room-settings in the state or just inferred from the first admin found
     const roomChat = (state.chats || [])
         .filter(c => c.roomId === state.user.roomId)
         .sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    // For simplicity, we store mute status in the StateContext state or a specific roomState
+    const isMuted = state.roomSettings?.[state.user.roomId]?.isChatMuted || false;
 
     useEffect(() => {
         if (chatHistoryRef.current) {
@@ -20,6 +25,7 @@ const Chat = () => {
         if (e) e.preventDefault();
         const text = inputText.trim();
         if (!text) return;
+        if (isMuted && state.user.role !== 'admin') return alert('The chat is currently muted by admin.');
 
         const newMessage = {
             id: Date.now(),
@@ -37,16 +43,37 @@ const Chat = () => {
         setInputText('');
     };
 
+    const toggleMute = () => {
+        const currentMute = state.roomSettings?.[state.user.roomId]?.isChatMuted || false;
+        setState(prev => ({
+            ...prev,
+            roomSettings: {
+                ...(prev.roomSettings || {}),
+                [state.user.roomId]: {
+                    ...(prev.roomSettings?.[state.user.roomId] || {}),
+                    isChatMuted: !currentMute
+                }
+            }
+        }));
+    };
+
     return (
         <div className="chat-page">
             <div className="flex justify-between items-center mb-4">
                 <div>
                     <h1>💬 Room Discussion</h1>
-                    <p>Chat with everyone currently in Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+                    <p>Chat with everyone in Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
                 </div>
+                {state.user.role === 'admin' && (
+                    <button className={`btn ${isMuted ? 'btn-danger' : 'btn-outline'}`} onClick={toggleMute}>
+                        {isMuted ? '🔇 Unmute Room' : '🔈 Mute Room'}
+                    </button>
+                )}
             </div>
 
             <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', height: '600px', padding: '1.5rem' }}>
+                {isMuted && <div className="text-center p-2 mb-4" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '12px', fontWeight: 'bold' }}>⚠️ Chat is currently MUTED. Only admins can send messages.</div>}
+                
                 <div 
                     id="chat-history" 
                     ref={chatHistoryRef}
@@ -90,11 +117,12 @@ const Chat = () => {
                         type="text" 
                         className="form-control" 
                         style={{ flex: 1, borderRadius: '999px', padding: '1rem 1.5rem' }} 
-                        placeholder="Type a message..." 
+                        placeholder={isMuted && state.user.role !== 'admin' ? "Chat is muted..." : "Type a message..."} 
                         value={inputText}
                         onChange={e => setInputText(e.target.value)}
+                        disabled={isMuted && state.user.role !== 'admin'}
                     />
-                    <button type="submit" className="btn btn-primary" style={{ borderRadius: '999px', padding: '1rem 2rem' }}>Send</button>
+                    <button type="submit" className="btn btn-primary" style={{ borderRadius: '999px', padding: '1rem 2rem' }} disabled={isMuted && state.user.role !== 'admin'}>Send</button>
                 </form>
             </div>
         </div>
