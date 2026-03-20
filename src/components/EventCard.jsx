@@ -6,146 +6,139 @@ const EventCard = ({ event }) => {
     const { state, setState } = useAppState();
     const navigate = useNavigate();
     const [showAttendees, setShowAttendees] = useState(false);
-    
-    const isRegistered = state.user?.role === 'student' && (event.attendees || []).some(a => String(a.id) === String(state.user.id));
-    const isAdmin = state.user?.role === 'admin';
+    const [showEditModal, setShowEditModal] = useState(false);
 
-    const handleRegister = (e) => {
-        e.stopPropagation();
-        if (!state.user) return;
-        
+    // Edit Form State
+    const [editData, setEditData] = useState({ ...event });
+
+    const isRegistered = (event.attendees || []).some(a => String(a.id) === String(state.user.id));
+    const isAdmin = state.user.role === 'admin';
+
+    const handleToggleRegistration = () => {
+        if (!isAdmin) return;
         const eventsCopy = [...state.events];
-        const idx = eventsCopy.findIndex(ev => ev.id === event.id);
-        const attendees = [...(eventsCopy[idx].attendees || [])];
-        
-        if (!attendees.some(a => String(a.id) === String(state.user.id))) {
-            attendees.push({
-                id: state.user.id,
-                name: state.user.name,
-                email: state.user.email
-            });
-            eventsCopy[idx] = { ...eventsCopy[idx], attendees };
-            setState(prev => ({ ...prev, events: eventsCopy }));
-            alert("Successfully registered for " + event.title);
-        }
-    };
-
-    const handleUnregister = (e) => {
-        e.stopPropagation();
-        if (!state.user) return;
-        if (!window.confirm("Are you sure you want to cancel your registration?")) return;
-
-        const eventsCopy = [...state.events];
-        const idx = eventsCopy.findIndex(ev => ev.id === event.id);
-        const attendees = (eventsCopy[idx].attendees || []).filter(a => String(a.id) !== String(state.user.id));
-        
-        eventsCopy[idx] = { ...eventsCopy[idx], attendees };
-        setState(prev => ({ ...prev, events: eventsCopy }));
-    };
-
-    const handleDelete = (e) => {
-        e.stopPropagation();
-        if (!window.confirm("Delete this event forever? This cannot be undone.")) return;
-        setState(prev => ({ ...prev, events: prev.events.filter(ev => ev.id !== event.id) }));
-    };
-
-    const toggleRegistration = (e) => {
-        e.stopPropagation();
-        const eventsCopy = [...state.events];
-        const idx = eventsCopy.findIndex(ev => ev.id === event.id);
+        const idx = eventsCopy.findIndex(e => e.id === event.id);
         eventsCopy[idx] = { ...eventsCopy[idx], registrationOpen: !eventsCopy[idx].registrationOpen };
         setState(prev => ({ ...prev, events: eventsCopy }));
     };
 
+    const handleDeleteEvent = () => {
+        if (!isAdmin) return;
+        if (window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
+            const eventsCopy = state.events.filter(e => e.id !== event.id);
+            setState(prev => ({ ...prev, events: eventsCopy }));
+        }
+    };
+
+    const handleEditSave = (e) => {
+        e.preventDefault();
+        const eventsCopy = [...state.events];
+        const idx = eventsCopy.findIndex(e => e.id === event.id);
+        eventsCopy[idx] = { ...editData };
+        setState(prev => ({ ...prev, events: eventsCopy }));
+        setShowEditModal(false);
+        alert("✅ Event Updated!");
+    };
+
     return (
-        <>
-            <div className="glass-panel event-card" onClick={() => navigate(`/event/${event.id}`)} style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }}>
-                <div className="event-img-container" style={{ position: 'relative', height: '180px' }}>
-                    <span className="event-category-badge" style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 2 }}>{event.category || 'Event'}</span>
-                    <span className="event-date-badge" style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 2 }}>📅 {event.date}</span>
-                    <img src={event.image} alt={event.title} className="event-img" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.src = 'https://via.placeholder.com/300x180?text=Event'} />
+        <div className="glass-panel event-card p-0 overflow-hidden flex flex-col" style={{ border: '2px solid var(--border)', transition: 'transform 0.3s ease' }}>
+            <div style={{ height: '180px', position: 'relative', overflow: 'hidden' }}>
+                <img src={event.image} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div className="badge badge-admin" style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.65rem', background: event.registrationOpen ? 'var(--success)' : 'var(--danger)', color: 'white' }}>
+                    {event.registrationOpen ? "Registration Open" : "Closed"}
                 </div>
-                <div className="event-details" style={{ padding: '1.5rem' }}>
-                    <h3 style={{ margin: '0 0 0.5rem 0' }}>{event.title}</h3>
-                    <div className="event-location" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>📍 {event.location || 'College Campus'}</div>
-                    <p className="event-description text-truncate" style={{ margin: '0.5rem 0', height: '3em', overflow: 'hidden' }}>{event.desc || event.description || ''}</p>
-                    
-                    <div className="event-actions" onClick={e => e.stopPropagation()}>
-                        {isAdmin ? (
-                            <div className="flex flex-col gap-2 mt-2">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className={`badge ${event.registrationOpen ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.7rem' }}>
-                                        {event.registrationOpen ? '● Registration Open' : '● Closed'}
-                                    </span>
-                                    <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>👥 {(event.attendees || []).length}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button className="btn btn-outline flex-1" style={{ padding: '0.4rem', fontSize: '0.75rem' }} onClick={toggleRegistration}>
-                                        {event.registrationOpen ? 'Close Reg' : 'Open Reg'}
-                                    </button>
-                                    <button className="btn btn-outline flex-1" style={{ padding: '0.4rem', fontSize: '0.75rem' }} onClick={() => setShowAttendees(true)}>
-                                        View All
-                                    </button>
-                                    <button className="btn btn-outline" style={{ padding: '0.4rem', fontSize: '0.75rem', color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDelete}>
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            isRegistered ? (
-                                <div className="flex flex-col gap-2">
-                                    <button className="btn btn-outline w-100" disabled style={{ background: 'var(--success-gradient)', color: 'white', border: 'none' }}>✓ Registered</button>
-                                    <button className="btn btn-link w-100 text-danger" style={{ fontSize: '0.8rem' }} onClick={handleUnregister}>Cancel Participation</button>
-                                </div>
-                            ) : (
-                                event.registrationOpen ? (
-                                    <button className="btn btn-primary w-100" onClick={handleRegister}>Register Now</button>
-                                ) : (
-                                    <button className="btn btn-outline w-100" disabled style={{ opacity: 0.6, borderColor: 'var(--danger)', color: 'var(--danger)' }}>Registration Closed</button>
-                                )
-                            )
-                        )}
+            </div>
+
+            <div className="p-4 flex-1 flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                    <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>{event.category}</span>
+                    <small className="text-secondary">{new Date(event.date).toLocaleDateString()}</small>
+                </div>
+                <h3 className="mb-2">{event.title}</h3>
+                <p className="text-secondary text-sm mb-4" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '3.6rem' }}>
+                    {event.description}
+                </p>
+
+                <div className="flex gap-2 mt-auto">
+                    <button className="btn btn-primary flex-1" onClick={() => navigate(`/event/${event.id}`)}>Details</button>
+                    {!isAdmin && (
+                        <button className={`btn ${isRegistered ? 'btn-outline' : 'btn-success'} flex-1`} style={{ opacity: (!event.registrationOpen && !isRegistered) ? 0.5 : 1 }}>
+                            {isRegistered ? "Unregister" : "Register Now"}
+                        </button>
+                    )}
+                </div>
+
+                {isAdmin && (
+                    <div className="mt-3 pt-3 border-top grid grid-cols-2 gap-2">
+                        <button className="btn btn-sm btn-outline text-success" onClick={handleToggleRegistration}>
+                            {event.registrationOpen ? "Close Reg" : "Open Reg"}
+                        </button>
+                        <button className="btn btn-sm btn-outline" onClick={() => setShowAttendees(true)}>👥 {event.attendees?.length || 0} RSVPs</button>
+                        <button className="btn btn-sm btn-primary" onClick={() => setShowEditModal(true)}>✏️ Edit Event</button>
+                        <button className="btn btn-sm btn-outline text-danger" onClick={handleDeleteEvent}>🗑️ Delete</button>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Attendees Modal */}
             {showAttendees && (
-                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowAttendees(false)}>
-                    <div className="glass-panel" style={{ width: '90%', maxWidth: '500px', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4 pb-4 border-bottom">
-                            <h2 style={{ margin: 0 }}>Attendees: {event.title}</h2>
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowAttendees(false)}>
+                    <div className="glass-panel" style={{ width: '90%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 style={{ margin: 0 }}>Event Attendees</h2>
                             <button className="btn" onClick={() => setShowAttendees(false)}>✕</button>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {(event.attendees || []).length === 0 ? (
-                                <p className="text-secondary text-center py-8">No one has registered yet.</p>
+                        <div className="flex flex-col gap-3">
+                            {(!event.attendees || event.attendees.length === 0) ? (
+                                <p className="text-secondary text-center p-8">No students registered yet for this event.</p>
                             ) : (
-                                <table style={{ width: '100%', textAlign: 'left' }}>
-                                    <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg)' }}>
-                                        <tr>
-                                            <th style={{ padding: '0.5rem' }}>Name</th>
-                                            <th style={{ padding: '0.5rem' }}>Email</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {event.attendees.map(a => (
-                                            <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold' }}>{a.name}</td>
-                                                <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem' }}>{a.email}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                event.attendees.map((student, i) => (
+                                    <div key={i} className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)' }}>
+                                        <div className="flex items-center gap-3">
+                                            <div className="avatar" style={{ width: '35px', height: '35px', fontSize: '0.8rem' }}>{student.name.charAt(0)}</div>
+                                            <div>
+                                                <div style={{ fontWeight: 800 }}>{student.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{student.email}</div>
+                                            </div>
+                                        </div>
+                                        <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>✓ Registered</span>
+                                    </div>
+                                ))
                             )}
-                        </div>
-                        <div className="mt-4 pt-4 border-top">
-                            <button className="btn btn-outline w-100" onClick={() => setShowAttendees(false)}>Close</button>
                         </div>
                     </div>
                 </div>
             )}
-        </>
+
+            {/* Edit Modal */}
+            {showEditModal && (
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10002, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowEditModal(false)}>
+                    <div className="glass-panel" style={{ width: '95%', maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2>Edit Event: {event.title}</h2>
+                            <button className="btn" onClick={() => setShowEditModal(false)}>✕</button>
+                        </div>
+                        <form onSubmit={handleEditSave} className="flex flex-col gap-4">
+                            <div className="form-group"><label>Event Title *</label><input type="text" className="form-control" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} required /></div>
+                            <div className="flex gap-4">
+                                <div className="form-group flex-1"><label>Date *</label><input type="date" className="form-control" value={editData.date} onChange={e => setEditData({...editData, date: e.target.value})} required /></div>
+                                <div className="form-group flex-1"><label>Category *</label><input type="text" className="form-control" value={editData.category} onChange={e => setEditData({...editData, category: e.target.value})} required /></div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="form-group flex-1"><label>Time *</label><input type="text" className="form-control" value={editData.time} onChange={e => setEditData({...editData, time: e.target.value})} /></div>
+                                <div className="form-group flex-1"><label>Location</label><input type="text" className="form-control" value={editData.location} onChange={e => setEditData({...editData, location: e.target.value})} /></div>
+                            </div>
+                            <div className="form-group"><label>Lead Coordinator *</label><input type="text" className="form-control" value={editData.headCoordinator} onChange={e => setEditData({...editData, headCoordinator: e.target.value})} /></div>
+                            <div className="form-group"><label>Description *</label><textarea className="form-control" rows="4" value={editData.description} onChange={e => setEditData({...editData, description: e.target.value})} required /></div>
+                            <div className="flex gap-2 pt-4 border-top">
+                                <button type="submit" className="btn btn-primary flex-1">Save Changes</button>
+                                <button type="button" className="btn btn-outline" onClick={() => setShowEditModal(false)}>Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

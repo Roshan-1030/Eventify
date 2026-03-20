@@ -51,6 +51,12 @@ const Groups = () => {
         alert('Join request sent!');
     };
 
+    const handleDeleteGroup = (id, name) => {
+        if (!window.confirm(`Are you sure you want to PERMANENTLY delete the group "${name}"? This will clear all its messages and members.`)) return;
+        setState(prev => ({ ...prev, groups: prev.groups.filter(g => g.id !== id) }));
+        if (groupId === id) navigate('/groups');
+    };
+
     const handleSendMessage = (e) => {
         e.preventDefault();
         if (!chatInput.trim() || !currentGroup) return;
@@ -81,10 +87,10 @@ const Groups = () => {
 
         if (!isMember && !isGroupAdmin) {
             return (
-                <div className="text-center p-6 glass-panel">
+                <div className="text-center p-12 glass-panel">
                     <h1>Private Group</h1>
                     <p>You must be a member of <strong>{currentGroup.name}</strong> to view this content.</p>
-                    <button className="btn btn-outline mt-4" onClick={() => navigate('/groups')}>Go Back</button>
+                    <button className="btn btn-primary mt-4" onClick={() => navigate('/groups')}>Back to Groups</button>
                 </div>
             );
         }
@@ -92,21 +98,25 @@ const Groups = () => {
         return (
             <div className="group-details">
                 <div className="flex justify-between items-center mb-6">
-                    <button className="btn btn-outline" onClick={() => navigate('/groups')}>← Back</button>
+                    <button className="btn btn-outline" onClick={() => navigate('/groups')}>← All Groups</button>
                     <div className="flex gap-2">
-                        <button className="btn btn-outline" onClick={() => { navigator.clipboard.writeText(window.location.href); alert('Link copied!'); }}>🔗 Invite</button>
+                        {isGlobalAdmin && <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleDeleteGroup(currentGroup.id, currentGroup.name)}>🗑️ Delete Group</button>}
+                        <button className="btn btn-outline" onClick={() => { navigator.clipboard.writeText(window.location.href); alert('Invite link copied!'); }}>🔗 Invite</button>
                     </div>
                 </div>
 
-                <div className="grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-                    <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '70vh' }}>
-                        <h2>{currentGroup.name} Chat</h2>
+                <div className="grid lg:grid-cols-3 gap-8" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                    <div className="glass-panel col-span-2" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '70vh' }}>
+                        <div className="flex justify-between items-center mb-2">
+                            <h2 style={{ margin: 0 }}>{currentGroup.name} Discussion</h2>
+                            <span className="badge badge-success">● Live</span>
+                        </div>
                         <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', margin: '1rem 0', padding: '1rem', border: '1px solid var(--border)', borderRadius: '12px', background: 'rgba(0,0,0,0.02)' }}>
-                            {(currentGroup.messages || []).length === 0 ? <p className="text-center text-secondary">No messages yet.</p> : (
+                            {(currentGroup.messages || []).length === 0 ? <p className="text-center text-secondary py-12">No messages in this group yet. Be the first!</p> : (
                                 currentGroup.messages.map((msg, i) => (
-                                    <div key={i} className="mb-3" style={{ textAlign: msg.userId === state.user.id ? 'right' : 'left' }}>
-                                        <div style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{msg.userName}</div>
-                                        <div style={{ display: 'inline-block', padding: '0.6rem 1rem', borderRadius: '12px', background: msg.userId === state.user.id ? 'var(--primary)' : '#e2e8f0', color: msg.userId === state.user.id ? 'white' : 'black', maxWidth: '80%' }}>
+                                    <div key={i} className="mb-4" style={{ textAlign: msg.userId === state.user.id ? 'right' : 'left' }}>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '4px' }}>{msg.userName}</div>
+                                        <div style={{ display: 'inline-block', padding: '0.8rem 1.2rem', borderRadius: '18px', background: msg.userId === state.user.id ? 'var(--primary-gradient)' : '#ffffff', color: msg.userId === state.user.id ? 'white' : 'black', maxWidth: '85%', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', border: msg.userId === state.user.id ? 'none' : '1px solid var(--border)' }}>
                                             {msg.text}
                                         </div>
                                     </div>
@@ -115,34 +125,37 @@ const Groups = () => {
                         </div>
                         {(!currentGroup.isMuted || isGroupAdmin) ? (
                             <form onSubmit={handleSendMessage} className="flex gap-2">
-                                <input type="text" className="form-control" placeholder="Type a message..." value={chatInput} onChange={e => setChatInput(e.target.value)} />
-                                <button type="submit" className="btn btn-primary">Send</button>
+                                <input type="text" className="form-control" placeholder="Type a message..." value={chatInput} onChange={e => setChatInput(e.target.value)} style={{ borderRadius: '99px', padding: '0.8rem 1.5rem' }} />
+                                <button type="submit" className="btn btn-primary" style={{ borderRadius: '99px', padding: '0 1.5rem' }}>Send</button>
                             </form>
-                        ) : <div className="text-center p-2 bg-danger text-white" style={{ borderRadius: '8px' }}>Muted</div>}
+                        ) : <div className="text-center p-3 bg-danger text-white rounded-lg">This group is currently muted.</div>}
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <div className="flex flex-col gap-6">
                         {isGroupAdmin && currentGroup.requests?.length > 0 && (
-                            <div className="glass-panel" style={{ border: '2px solid var(--accent)', padding: '1.5rem' }}>
-                                <h3>Requests ({currentGroup.requests.length})</h3>
+                            <div className="glass-panel" style={{ border: '2.5px solid var(--accent)', padding: '1.5rem' }}>
+                                <h3 className="mb-4">Access Requests ({currentGroup.requests.length})</h3>
                                 {currentGroup.requests.map(req => (
-                                    <div key={req.id} className="flex justify-between items-center mb-2 p-2" style={{ background: 'rgba(0,0,0,0.05)', borderRadius: '8px' }}>
-                                        <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{req.name}</span>
-                                        <div className="flex gap-1">
-                                            <button className="btn btn-sm" onClick={() => handleRequest(req.id, true)}>✔</button>
-                                            <button className="btn btn-sm btn-outline" onClick={() => handleRequest(req.id, false)}>✖</button>
+                                    <div key={req.id} className="flex justify-between items-center mb-2 p-3" style={{ background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
+                                        <span style={{ fontWeight: 800 }}>{req.name}</span>
+                                        <div className="flex gap-2">
+                                            <button className="btn btn-sm btn-outline text-success" onClick={() => handleRequest(req.id, true)}>✔</button>
+                                            <button className="btn btn-sm btn-outline text-danger" onClick={() => handleRequest(req.id, false)}>✖</button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
                         <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                            <h3>Members ({currentGroup.members.length})</h3>
+                            <h3>Group Members ({currentGroup.members.length})</h3>
                             <div className="mt-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                                 {currentGroup.members.map(m => (
-                                    <div key={m.id} className="flex items-center gap-2 mb-3 p-2 border-bottom">
-                                        <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}>{m.name.charAt(0)}</div>
-                                        <strong>{m.name}</strong>
+                                    <div key={m.id} className="flex items-center gap-3 mb-3 p-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '0.9rem' }}>{m.name.charAt(0)}</div>
+                                        <div>
+                                            <div style={{ fontWeight: 800 }}>{m.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{m.email}</div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -155,39 +168,54 @@ const Groups = () => {
 
     return (
         <div className="groups-page">
-            <div className="flex justify-between items-center mb-6">
-                <h1>Groups</h1>
-                {state.user.role === 'admin' && <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(!isCreateModalOpen)}>+ Create New Group</button>}
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                <div>
+                    <h1>Room Communities</h1>
+                    <p>Join organized student groups in Room <strong>{state.user.roomId}</strong></p>
+                </div>
+                {state.user.role === 'admin' && <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(!isCreateModalOpen)}>+ Start New Group</button>}
             </div>
 
             {isCreateModalOpen && (
-                <div className="glass-panel mb-8">
-                    <h2>Create New Group</h2>
-                    <form onSubmit={handleCreateGroup}>
-                        <div className="form-group"><label>Name</label><input type="text" className="form-control" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} required /></div>
-                        <div className="form-group"><label>Description</label><textarea className="form-control" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} /></div>
-                        <div className="flex gap-2">
-                            <button type="submit" className="btn btn-primary">Create</button>
-                            <button type="button" className="btn btn-outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
-                        </div>
-                    </form>
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsCreateModalOpen(false)}>
+                    <div className="glass-panel" style={{ width: '90%', maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+                        <h2>Create New Group</h2>
+                        <form onSubmit={handleCreateGroup} className="flex flex-col gap-4 mt-4">
+                            <div className="form-group"><label>Group Name *</label><input type="text" className="form-control" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="e.g. Science Club" required /></div>
+                            <div className="form-group"><label>Brief Description</label><textarea className="form-control" rows="3" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} placeholder="What is this group for?" /></div>
+                            <div className="flex gap-2 mt-4 pt-4 border-top">
+                                <button type="submit" className="btn btn-primary flex-1">Create Group</button>
+                                <button type="button" className="btn btn-outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
 
             <div className="grid-cards">
-                {roomGroups.length === 0 ? <p className="text-secondary">No groups found.</p> : roomGroups.map(g => (
-                    <div key={g.id} className="glass-panel" style={{ padding: '1.5rem', cursor: 'pointer' }} onClick={() => navigate(`/groups/${g.id}`)}>
+                {roomGroups.length === 0 ? <p className="text-secondary p-12 glass-panel text-center">No communities formed in this room yet.</p> : roomGroups.map(g => (
+                    <div key={g.id} className="glass-panel" style={{ padding: '1.5rem', cursor: 'pointer', position: 'relative' }} onClick={() => navigate(`/groups/${g.id}`)}>
+                        {state.user.role === 'admin' && (
+                            <button className="btn btn-sm btn-outline" style={{ position: 'absolute', top: '15px', right: '15px', color: 'var(--danger)', borderColor: 'var(--danger)', zIndex: 10 }} onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteGroup(g.id, g.name);
+                            }}>Delete</button>
+                        )}
                         <div className="flex items-start gap-4">
-                            <div className="avatar" style={{ width: '50px', height: '50px', background: 'var(--primary)', color: 'white' }}>{g.name.charAt(0)}</div>
-                            <div>
+                            <div className="avatar" style={{ width: '60px', height: '60px', background: 'var(--primary-gradient)', color: 'white', fontSize: '1.5rem' }}>{g.name.charAt(0)}</div>
+                            <div className="flex-1">
                                 <h3 style={{ margin: 0 }}>{g.name}</h3>
-                                <p style={{ fontSize: '0.85rem' }}>{g.members.length} Members</p>
-                                <p style={{ opacity: 0.8 }}>{g.description}</p>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 800 }}>{g.members.length} Members Online</p>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }} className="text-truncate">{g.description}</p>
                             </div>
                         </div>
                         <div className="mt-4">
-                            {!g.members.some(m => String(m.id) === String(state.user.id)) && !g.requests?.some(r => r.id === state.user.id) && (
-                                <button className="btn btn-primary w-100" onClick={(e) => { e.stopPropagation(); handleJoinGroup(g.id); }}>Join Group</button>
+                            {!g.members.some(m => String(m.id) === String(state.user.id)) && !g.requests?.some(r => r.id === state.user.id) ? (
+                                <button className="btn btn-primary w-100" onClick={(e) => { e.stopPropagation(); handleJoinGroup(g.id); }}>Send Join Request</button>
+                            ) : !g.members.some(m => String(m.id) === String(state.user.id)) ? (
+                                <button className="btn btn-outline w-100" disabled>Pending Approval...</button>
+                            ) : (
+                                <button className="btn btn-outline w-100" style={{ borderStyle: 'dashed' }}>Enter Conversation</button>
                             )}
                         </div>
                     </div>
