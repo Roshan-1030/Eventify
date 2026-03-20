@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const Header = () => {
     const { state, logout } = useAppState();
+    const location = useLocation();
+    
     const [isNavOpen, setIsNavOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const currentHash = window.location.hash || '#dashboard';
@@ -18,16 +21,16 @@ const Header = () => {
     }, []);
 
     const navItems = [
-        { hash: '/index.html', icon: '🏠', text: 'Home', isPage: true, isPublic: true },
-        { hash: '/about.html', icon: 'ℹ️', text: 'About', isPage: true, isPublic: true },
-        { hash: '/contact.html', icon: '📞', text: 'Contact', isPage: true, isPublic: true },
-        { hash: '#dashboard', icon: '📊', text: 'Dashboard', isPublic: false },
-        { hash: '#announcements', icon: '📢', text: 'Announcements', isPublic: false },
-        { hash: '#polls', icon: '📊', text: 'Polls', isPublic: false },
-        { hash: '#groups', icon: '👥', text: 'Groups', isPublic: false },
-        { hash: '#chat', icon: '💬', text: 'Discussion', isPublic: false },
-        { hash: '#feedback', icon: '📝', text: 'Feedback', isPublic: false },
-        { hash: '#reports', icon: '📈', text: 'Reports', isPublic: false, isAdminOnly: true }
+        { path: '/', icon: '🏠', text: 'Home', isPage: true, isPublic: true },
+        { path: '/about', icon: 'ℹ️', text: 'About', isPage: true, isPublic: true },
+        { path: '/contact', icon: '📞', text: 'Contact', isPage: true, isPublic: true },
+        { path: '/#dashboard', icon: '📊', text: 'Dashboard', isPublic: false },
+        { path: '/#announcements', icon: '📢', text: 'Announcements', isPublic: false },
+        { path: '/#polls', icon: '📊', text: 'Polls', isPublic: false },
+        { path: '/#groups', icon: '👥', text: 'Groups', isPublic: false },
+        { path: '/#chat', icon: '💬', text: 'Discussion', isPublic: false },
+        { path: '/#feedback', icon: '📝', text: 'Feedback', isPublic: false },
+        { path: '/#reports', icon: '📈', text: 'Reports', isPublic: false, isAdminOnly: true }
     ];
 
     // Filter nav items based on user role and existence
@@ -38,8 +41,8 @@ const Header = () => {
     });
 
     const isActive = (item) => {
-        if (item.isPage) return window.location.pathname.endsWith(item.hash) || (window.location.pathname === '/' && item.hash === '/index.html');
-        return currentHash.startsWith(item.hash);
+        if (item.isPage) return location.pathname === item.path;
+        return currentHash.startsWith(item.path.split('#')[1] || 'dashboard');
     };
 
     return (
@@ -52,19 +55,21 @@ const Header = () => {
                         <div id="nav-options" className="glass-panel" style={{ display: 'block', position: 'fixed', top: '80px', left: '20px', minWidth: '250px', zIndex: 10000, padding: '1.5rem', border: '2px solid var(--text-primary)' }}>
                             <div className="nav-links-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {filteredNavItems.map(item => (
-                                    <a key={item.hash} href={item.hash} className={`nav-link ${isActive(item) ? 'active' : ''}`} style={{ width: '100%' }} onClick={closeAll}>
+                                    <Link key={item.path} to={item.path} className={`nav-link ${isActive(item) ? 'active' : ''}`} style={{ width: '100%' }} onClick={closeAll}>
                                         <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{item.icon}</span>
                                         {item.text}
-                                    </a>
+                                    </Link>
                                 ))}
                             </div>
                         </div>
                     )}
                 </div>
                 
-                <h1 className="logo mb-0" style={{ cursor: 'pointer', fontSize: '2.5rem', margin: 0, textAlign: 'center', flex: 1 }} onClick={() => { window.location.href = '/index.html'; }}>
-                    Eventify
-                </h1>
+                <Link to="/" style={{ textDecoration: 'none', textAlign: 'center', flex: 1 }}>
+                    <h1 className="logo mb-0" style={{ fontSize: '2.5rem', margin: 0 }}>
+                        Eventify
+                    </h1>
+                </Link>
                 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flex: 1, position: 'relative' }}>
                     {state.user ? (
@@ -77,7 +82,7 @@ const Header = () => {
                             {isProfileOpen && (
                                 <div id="profile-dropdown" className="glass-panel" style={{ display: 'block', position: 'absolute', top: '100%', right: 0, minWidth: '180px', zIndex: 1000, padding: '0.5rem 0', marginTop: '0.5rem', border: '2px solid var(--text-primary)' }}>
                                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                        <li><a href="#profile" className="dropdown-item" onClick={closeAll}>👤 View Profile</a></li>
+                                        <li><Link to="/#profile" className="dropdown-item" onClick={closeAll}>👤 View Profile</Link></li>
                                         <li><hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '0.5rem 0' }} /></li>
                                         <li><button className="dropdown-item" onClick={() => { logout(); closeAll(); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 'inherit', cursor: 'pointer', color: 'var(--danger)' }}>🚪 Logout</button></li>
                                     </ul>
@@ -85,7 +90,7 @@ const Header = () => {
                             )}
                         </>
                     ) : (
-                        <a href="/index.html#login" className="btn btn-primary btn-sm" style={{ padding: '0.5rem 1rem' }}>Login</a>
+                        <Link to="/login" className="btn btn-primary" style={{ padding: '0.6rem 1.2rem' }}>Login</Link>
                     )}
                 </div>
             </div>

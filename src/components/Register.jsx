@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const Register = () => {
@@ -68,8 +69,8 @@ const Register = () => {
                     <button type="submit" className="btn btn-primary w-100 mt-2">Create Admin Account</button>
                 </form>
                 
-                <p className="mt-4 text-center">Student wanting to join? <button className="btn btn-link" onClick={() => window.location.hash = '#login'}>Login with Room ID</button></p>
-                <p className="mt-2 text-center">Already an admin? <button className="btn btn-link" onClick={() => window.location.hash = '#login'}>Login here</button></p>
+                <p className="mt-4 text-center">Student wanting to join? <Link to="/login" className="btn btn-link">Login with Room ID</Link></p>
+                <p className="mt-2 text-center">Already an admin? <Link to="/login" className="btn btn-link">Login here</Link></p>
             </div>
         </div>
     );

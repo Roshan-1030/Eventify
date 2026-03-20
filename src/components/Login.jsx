@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const Login = () => {
@@ -150,7 +151,7 @@ const Login = () => {
                     <button type="submit" className="btn btn-primary w-100 mt-2">Login</button>
                 </form>
                 
-                <p className="mt-4 text-center">New here? <button className="btn btn-link" onClick={() => window.location.hash = '#register'}>Create an account</button></p>
+                <p className="mt-4 text-center">New here? <Link to="/register" className="btn btn-link">Create an account</Link></p>
                 <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Admin test account:<br/>email: <b>admin@college.edu</b> / pass: <b>admin</b><br/>
                     Room ID: <b>ADM-12345</b>
