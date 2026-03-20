@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppState } from './context/StateContext';
 
 // Components
@@ -66,9 +66,15 @@ const App = () => {
                 <Route path="/chat" element={<AuthGuard><Layout><Chat /></Layout></AuthGuard>} />
                 <Route path="/feedback" element={<AuthGuard><Layout><Feedback /></Layout></AuthGuard>} />
                 <Route path="/reports" element={<AuthGuard><Layout><Reports /></Layout></AuthGuard>} />
+                
                 <Route path="/gallery" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
+                <Route path="/gallery/:folderId" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
+                
                 <Route path="/polls" element={<AuthGuard><Layout><Polls /></Layout></AuthGuard>} />
+                
                 <Route path="/groups" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
+                <Route path="/groups/:groupId" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
+                
                 <Route path="/event/:id" element={<AuthGuard><Layout><EventDetails /></Layout></AuthGuard>} />
                 <Route path="/profile" element={<AuthGuard><Layout><Profile /></Layout></AuthGuard>} />
 

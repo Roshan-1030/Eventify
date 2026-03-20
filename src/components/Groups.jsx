@@ -1,29 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const Groups = () => {
     const { state, setState } = useAppState();
-    const [groupId, setGroupId] = useState(null);
+    const { groupId: routeGroupId } = useParams();
+    const navigate = useNavigate();
+    
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDesc, setNewGroupDesc] = useState('');
     const [chatInput, setChatInput] = useState('');
     const chatRef = useRef(null);
 
-    useEffect(() => {
-        const updateGroupId = () => {
-            const hash = window.location.hash;
-            if (hash.includes('#groups?id=')) {
-                setGroupId(parseInt(hash.split('?id=')[1]));
-            } else {
-                setGroupId(null);
-            }
-        };
-        updateGroupId();
-        window.addEventListener('hashchange', updateGroupId);
-        return () => window.removeEventListener('hashchange', updateGroupId);
-    }, []);
-
+    const groupId = routeGroupId ? parseInt(routeGroupId) : null;
     const roomGroups = (state.groups || []).filter(g => g.roomId === state.user.roomId);
     const currentGroup = groupId ? (state.groups || []).find(g => g.id === groupId) : null;
 
@@ -94,7 +84,7 @@ const Groups = () => {
                 <div className="text-center p-6 glass-panel">
                     <h1>Private Group</h1>
                     <p>You must be a member of <strong>{currentGroup.name}</strong> to view this content.</p>
-                    <button className="btn btn-outline mt-4" onClick={() => window.location.hash = '#groups'}>Go Back</button>
+                    <button className="btn btn-outline mt-4" onClick={() => navigate('/groups')}>Go Back</button>
                 </div>
             );
         }
@@ -102,7 +92,7 @@ const Groups = () => {
         return (
             <div className="group-details">
                 <div className="flex justify-between items-center mb-6">
-                    <button className="btn btn-outline" onClick={() => window.location.hash = '#groups'}>← Back</button>
+                    <button className="btn btn-outline" onClick={() => navigate('/groups')}>← Back</button>
                     <div className="flex gap-2">
                         <button className="btn btn-outline" onClick={() => { navigator.clipboard.writeText(window.location.href); alert('Link copied!'); }}>🔗 Invite</button>
                     </div>
@@ -186,7 +176,7 @@ const Groups = () => {
 
             <div className="grid-cards">
                 {roomGroups.length === 0 ? <p className="text-secondary">No groups found.</p> : roomGroups.map(g => (
-                    <div key={g.id} className="glass-panel" style={{ padding: '1.5rem', cursor: 'pointer' }} onClick={() => window.location.hash = `#groups?id=${g.id}`}>
+                    <div key={g.id} className="glass-panel" style={{ padding: '1.5rem', cursor: 'pointer' }} onClick={() => navigate(`/groups/${g.id}`)}>
                         <div className="flex items-start gap-4">
                             <div className="avatar" style={{ width: '50px', height: '50px', background: 'var(--primary)', color: 'white' }}>{g.name.charAt(0)}</div>
                             <div>

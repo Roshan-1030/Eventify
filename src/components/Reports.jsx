@@ -1,28 +1,30 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const Reports = () => {
     const { state, setState } = useAppState();
+    const navigate = useNavigate();
 
     if (state.user?.role !== 'admin') {
         return (
-            <div className="glass-panel text-center">
+            <div className="glass-panel text-center p-12">
                 <h1>Access Denied</h1>
                 <p>Only administrators can view room reports.</p>
-                <button className="btn btn-primary" onClick={() => window.location.hash = '#dashboard'}>Back to Home</button>
+                <button className="btn btn-primary mt-4" onClick={() => navigate('/')}>Back to Home</button>
             </div>
         );
     }
 
     const students = (state.users || []).filter(u => u.role === 'student' && u.roomId === state.user.roomId);
+    const roomEvents = (state.events || []).filter(e => e.roomId === state.user.roomId);
+    
     const studentReport = students.map(s => {
-        const registeredEvents = (state.events || []).filter(e => e.roomId === state.user.roomId && (e.attendees || []).some(a => String(a.id) === String(s.id)));
+        const registeredEvents = roomEvents.filter(e => (e.attendees || []).some(a => String(a.id) === String(s.id)));
         return { ...s, registeredEvents };
     });
 
-    const totalRoomRegistrations = (state.events || [])
-        .filter(e => e.roomId === state.user.roomId)
-        .reduce((sum, e) => sum + (e.attendees || []).length, 0);
+    const totalRoomRegistrations = roomEvents.reduce((sum, e) => sum + (e.attendees || []).length, 0);
 
     const handleRemoveStudent = (studentId) => {
         if (!window.confirm('Are you sure you want to remove this student from the room? Their event registrations will also be completely cleared.')) return;
@@ -38,9 +40,27 @@ const Reports = () => {
         setState(prev => ({ ...prev, users: newUsers, events: newEvents }));
     };
 
+    const handleExportCSV = () => {
+        let csvContent = "data:text/csv;charset=utf-8,Student Name,Email,Branch,Year,Registered Events Count,Events List\n";
+        studentReport.forEach(s => {
+            const eventTitles = s.registeredEvents.map(e => e.title).join("; ");
+            const row = `"${s.name}","${s.email || 'N/A'}","${s.branch || 'N/A'}","${s.year || 'N/A'}","${s.registeredEvents.length}","${eventTitles}"`;
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Student_Report_Room_${state.user.roomId}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleExportPDF = () => {
         if (typeof window.html2pdf === 'undefined') {
-            alert('PDF library is loading or failed to load. Please check your connection.');
+            alert('PDF library not detected. Loading standard print dialog instead.');
+            window.print();
             return;
         }
         
@@ -48,107 +68,101 @@ const Reports = () => {
         printContainer.style.padding = '2rem';
         printContainer.style.background = '#ffffff';
         printContainer.style.color = '#0f172a';
-        printContainer.style.fontFamily = 'Inter, sans-serif';
-        
         printContainer.innerHTML = `
-            <h1 style="text-align: center; margin-bottom: 2rem;">Student Directory - Room ${state.user.roomId}</h1>
-            <table style="width: 100%; border-collapse: collapse; margin: 0 auto; text-align: left;">
+            <h1 style="text-align: center; margin-bottom: 2rem;">Room Report - ${state.user.roomId}</h1>
+            <p style="text-align: center;">Total Students: ${students.length} | Total Registrations: ${totalRoomRegistrations}</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 2rem; border: 1px solid #e2e8f0;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #e2e8f0;">
-                        <th style="padding: 1rem;">Student Name</th>
-                        <th style="padding: 1rem;">Email Address</th>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
+                        <th style="padding: 1rem; border: 1px solid #e2e8f0;">Name</th>
+                        <th style="padding: 1rem; border: 1px solid #e2e8f0;">Details</th>
+                        <th style="padding: 1rem; border: 1px solid #e2e8f0;">Events</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${students.length === 0 ? '<tr><td colspan="2" style="padding: 2rem; text-align: center;">No students available.</td></tr>' : students.map((s, idx) => `
-                        <tr style="border-bottom: 1px solid #f1f5f9; background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-                            <td style="padding: 1rem; font-weight: bold;">${s.name}</td>
-                            <td style="padding: 1rem; color: #475569;">${s.email || 'N/A'}</td>
+                    ${studentReport.map(s => `
+                        <tr>
+                            <td style="padding: 1rem; border: 1px solid #e2e8f0; font-weight: bold;">${s.name}</td>
+                            <td style="padding: 1rem; border: 1px solid #e2e8f0;">${s.branch} - ${s.year} Year</td>
+                            <td style="padding: 1rem; border: 1px solid #e2e8f0;">${s.registeredEvents.map(e => e.title).join(', ') || 'None'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-            <p style="text-align: center; margin-top: 2rem; color: #64748b; font-size: 0.8rem;">Generated by Eventify | Total Students: ${students.length}</p>
         `;
-
-        printContainer.style.position = 'absolute';
-        printContainer.style.left = '-9999px';
-        document.body.appendChild(printContainer);
-
-        const opt = {
-            margin: 0.5,
-            filename: 'Student_Directory_' + state.user.roomId + '.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
         
-        window.html2pdf().set(opt).from(printContainer).save().then(() => {
-            document.body.removeChild(printContainer);
-        });
+        const opt = { margin: 0.5, filename: `Report_${state.user.roomId}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+        window.html2pdf().set(opt).from(printContainer).save();
     };
 
     return (
         <div className="reports-page">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1>Room Registration Report</h1>
-                    <p>Comprehensive activity overview for Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+                    <p>High-level overview for Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
                 </div>
-                <button className="btn btn-outline" onClick={() => window.location.hash = '#dashboard'}>← Back to Dashboard</button>
+                <div className="flex gap-2">
+                    <button className="btn btn-outline" style={{ border: '1px solid var(--primary)', color: 'var(--primary)' }} onClick={handleExportCSV}>📊 Export CSV</button>
+                    <button className="btn btn-primary" onClick={handleExportPDF}>📄 Export PDF</button>
+                </div>
             </div>
 
-            <div className="grid-cards mb-4" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                <div className="glass-panel text-center">
-                    <h3 style={{ fontSize: '2rem', color: 'var(--accent)' }}>{students.length}</h3>
-                    <p style={{ fontWeight: 'bold', marginBottom: 0 }}>Total Students Enrolled</p>
+            <div className="grid-cards mb-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                <div className="glass-panel text-center" style={{ border: '2px solid var(--accent)' }}>
+                    <h3 style={{ fontSize: '2.5rem', color: 'var(--accent)', margin: 0 }}>{students.length}</h3>
+                    <p style={{ fontWeight: 'bold' }}>Enrolled Students</p>
                 </div>
-                <div className="glass-panel text-center">
-                    <h3 style={{ fontSize: '2rem', color: 'var(--primary)' }}>{totalRoomRegistrations}</h3>
-                    <p style={{ fontWeight: 'bold', marginBottom: 0 }}>Total Registrations</p>
+                <div className="glass-panel text-center" style={{ border: '2px solid var(--primary)' }}>
+                    <h3 style={{ fontSize: '2.5rem', color: 'var(--primary)', margin: 0 }}>{totalRoomRegistrations}</h3>
+                    <p style={{ fontWeight: 'bold' }}>Total Registrations</p>
+                </div>
+                <div className="glass-panel text-center" style={{ border: '2px solid var(--success)' }}>
+                    <h3 style={{ fontSize: '2.5rem', color: 'var(--success)', margin: 0 }}>{roomEvents.length}</h3>
+                    <p style={{ fontWeight: 'bold' }}>Active Events</p>
                 </div>
             </div>
 
             <div className="glass-panel">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 style={{ margin: 0 }}>Student Activity Breakdown</h2>
-                    <button className="btn btn-primary" onClick={handleExportPDF}>📄 Export to PDF</button>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 style={{ margin: 0 }}>Student Activity Detail</h2>
+                    <p className="text-secondary text-sm">Showing filtered results for current room.</p>
                 </div>
-                <div className="table-container">
-                    <table style={{ width: '100%', minWidth: '800px' }}>
-                        <thead>
+                <div className="table-container" style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', textAlign: 'left', borderCollapse: 'collapse' }}>
+                        <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
                             <tr>
-                                <th>Student Details</th>
-                                <th>Current Profile</th>
-                                <th>Registered Events</th>
-                                <th className="text-center">Total Count</th>
-                                <th className="text-right">Actions</th>
+                                <th style={{ padding: '1rem' }}>Student Name</th>
+                                <th style={{ padding: '1rem' }}>Academic Profile</th>
+                                <th style={{ padding: '1rem' }}>Registrations</th>
+                                <th style={{ padding: '1rem' }} className="text-center">Count</th>
+                                <th style={{ padding: '1rem' }} className="text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {studentReport.length === 0 ? (
-                                <tr><td colSpan="5" className="text-center" style={{ padding: '2rem', color: 'var(--text-secondary)' }}>No students registered in this room yet.</td></tr>
+                                <tr><td colSpan="5" className="text-center p-12 text-secondary">No active students in this room.</td></tr>
                             ) : (
                                 studentReport.map(s => (
-                                    <tr key={s.id}>
-                                        <td>
-                                            <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{s.name}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.email || 'N/A'}</div>
+                                    <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ fontWeight: 800 }}>{s.name}</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.email}</div>
                                         </td>
-                                        <td>
+                                        <td style={{ padding: '1rem' }}>
                                             <div style={{ fontWeight: 'bold' }}>{s.branch || 'N/A'}</div>
                                             <div style={{ fontSize: '0.8rem' }}>{s.year || 'N/A'} Year</div>
                                         </td>
-                                        <td>
+                                        <td style={{ padding: '1rem' }}>
                                             {s.registeredEvents.length > 0 
-                                                ? s.registeredEvents.map(e => <span key={e.id} className="badge badge-student" style={{ fontSize: '0.7rem', marginRight: '4px' }}>{e.title}</span>)
-                                                : <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No registrations</span>}
+                                                ? <div className="flex gap-1 flex-wrap">{s.registeredEvents.map(e => <span key={e.id} className="badge badge-primary" style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem' }}>{e.title}</span>)}</div>
+                                                : <span className="text-secondary text-sm">No registrations</span>}
                                         </td>
-                                        <td className="text-center">
-                                            <span className="badge" style={{ background: 'var(--text-primary)', color: 'white', fontSize: '1rem', padding: '0.4rem 0.8rem' }}>{s.registeredEvents.length}</span>
+                                        <td style={{ padding: '1rem' }} className="text-center">
+                                            <span style={{ fontWeight: 800 }}>{s.registeredEvents.length}</span>
                                         </td>
-                                        <td className="text-right">
-                                            <button className="btn btn-outline" style={{ borderColor: 'var(--danger)', color: 'var(--danger)', padding: '0.3rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleRemoveStudent(s.id)}>Remove</button>
+                                        <td style={{ padding: '1rem' }} className="text-right">
+                                            <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleRemoveStudent(s.id)}>Remove Student</button>
                                         </td>
                                     </tr>
                                 ))

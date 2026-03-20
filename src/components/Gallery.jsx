@@ -1,27 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const Gallery = () => {
     const { state, setState } = useAppState();
-    const [folderId, setFolderId] = useState(null);
+    const { folderId: routeFolderId } = useParams();
+    const navigate = useNavigate();
+    
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    // Parse folder ID from hash on mount/change
-    useEffect(() => {
-        const updateFolderFromHash = () => {
-            const hash = window.location.hash;
-            if (hash.includes('?folder=')) {
-                setFolderId(parseInt(hash.split('?folder=')[1]));
-            } else {
-                setFolderId(null);
-            }
-        };
-        updateFolderFromHash();
-        window.addEventListener('hashchange', updateFolderFromHash);
-        return () => window.removeEventListener('hashchange', updateFolderFromHash);
-    }, []);
-
+    const folderId = routeFolderId ? parseInt(routeFolderId) : null;
     const roomFolders = (state.folders || []).filter(f => f.roomId === state.user.roomId);
     const currentFolder = folderId ? roomFolders.find(f => f.id === folderId) : null;
     const folderImages = folderId ? (state.gallery || []).filter(g => g.folderId === folderId) : [];
@@ -95,7 +84,7 @@ const Gallery = () => {
                         <p className="text-secondary">No photo folders in this room yet.</p>
                     ) : (
                         roomFolders.map(f => (
-                            <div key={f.id} className="glass-panel text-center" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => window.location.hash = `#gallery?folder=${f.id}`}>
+                            <div key={f.id} className="glass-panel text-center" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => navigate(`/gallery/${f.id}`)}>
                                 {state.user.role === 'admin' && (
                                     <button className="btn btn-sm btn-outline" style={{ position: 'absolute', top: '10px', right: '10px', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem', zIndex: 10 }} onClick={(e) => {
                                         e.stopPropagation();
@@ -119,7 +108,12 @@ const Gallery = () => {
         );
     }
 
-    if (!currentFolder) return <div className="text-center">Folder not found. <button className="btn" onClick={() => window.location.hash = '#gallery'}>Back</button></div>;
+    if (!currentFolder) return (
+        <div className="text-center p-8">
+            <h1>Folder not found.</h1>
+            <button className="btn btn-primary mt-4" onClick={() => navigate('/gallery')}>Back to Gallery</button>
+        </div>
+    );
 
     const currentImg = folderImages[currentImageIndex];
 
@@ -127,7 +121,7 @@ const Gallery = () => {
         <div className="gallery-view">
             <div className="flex justify-between items-center mb-4" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                    <button className="btn btn-outline btn-sm mb-2" onClick={() => window.location.hash = '#gallery'} style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>← Back to Folders</button>
+                    <button className="btn btn-outline btn-sm mb-2" onClick={() => navigate('/gallery')} style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>← Back to Folders</button>
                     <h1>{currentFolder.name}</h1>
                 </div>
                 <div className="flex gap-2">

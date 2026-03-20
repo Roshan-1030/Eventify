@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import EventCard from './EventCard';
 
 const StudentDashboard = () => {
     const { state } = useAppState();
+    const navigate = useNavigate();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeCategory, setActiveCategory] = useState('All');
     
     const roomEvents = (state.events || []).filter(e => e.roomId === state.user.roomId);
-    const registered = roomEvents.filter(e => (e.attendees || []).some(a => String(a.id) === String(state.user.id)));
-    const unregistered = roomEvents.filter(e => !(e.attendees || []).some(a => String(a.id) === String(state.user.id)));
     const roomStudentsCount = (state.users || []).filter(u => u.role === 'student' && u.roomId === state.user.roomId).length;
+
+    // Categories found in room events
+    const availableCategories = ['All', ...new Set(roomEvents.map(e => e.category || 'General'))];
+
+    // Filter logic
+    const filteredEvents = roomEvents.filter(e => {
+        const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              (e.desc || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = activeCategory === 'All' || e.category === activeCategory;
+        return matchesSearch && matchesCategory;
+    });
+
+    const registered = filteredEvents.filter(e => (e.attendees || []).some(a => String(a.id) === String(state.user.id)));
+    const unregistered = filteredEvents.filter(e => !(e.attendees || []).some(a => String(a.id) === String(state.user.id)));
 
     const shareRoomId = () => {
         const shareLink = `${window.location.origin}/login?room=${state.user.roomId}`;
@@ -19,41 +35,73 @@ const StudentDashboard = () => {
 
     return (
         <div className="student-dashboard">
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-6 flex-wrap gap-4">
                 <div>
-                    <h1>Welcome Back, {state.user.name}</h1>
-                    <p>Room: <span className="badge badge-admin">{state.user.roomId}</span> 
-                       <button className="btn btn-sm btn-outline" style={{ padding: '2px 8px', marginLeft: '5px', fontSize: '0.7rem' }} onClick={shareRoomId}>🔗 Share</button>
+                    <h1>Welcome Back, {state.user.name.split(' ')[0]} 👋</h1>
+                    <p style={{ margin: 0 }}>Room ID: <span className="badge badge-admin">{state.user.roomId}</span> 
+                       <button className="btn btn-sm btn-outline" style={{ padding: '0.2rem 0.6rem', marginLeft: '8px', fontSize: '0.75rem' }} onClick={shareRoomId}>🔗 Share Room Link</button>
                     </p>
                     <div className="mt-2">
-                        <span className="badge badge-success" style={{ fontSize: '0.9rem' }}>👥 {roomStudentsCount} Students in this Room</span>
+                        <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>👥 {roomStudentsCount} Students in this Room</span>
+                    </div>
+                </div>
+                <button className="btn btn-primary" onClick={() => navigate('/chat')}>💬 Open Discussion</button>
+            </div>
+
+            {/* Search and Discovery Tools */}
+            <div className="glass-panel mb-8 flex flex-col gap-4">
+                <div className="flex gap-4 items-center flex-wrap">
+                    <div className="form-group flex-1" style={{ marginBottom: 0, minWidth: '250px' }}>
+                        <input 
+                            type="text" 
+                            className="form-control" 
+                            placeholder="🔍 Search events..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                        {availableCategories.map(cat => (
+                            <button 
+                                key={cat} 
+                                className={`btn btn-sm ${activeCategory === cat ? 'btn-primary' : 'btn-outline'}`}
+                                onClick={() => setActiveCategory(cat)}
+                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                            >
+                                {cat}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
             
-            <h2 className="mt-4">Your Registered Events</h2>
+            <h2 className="mt-8 mb-4">Your Registered Events ({registered.length})</h2>
             {registered.length === 0 ? (
-                <p className="text-secondary">You haven't registered for any events yet.</p>
+                <p className="text-secondary p-8 glass-panel text-center">You haven't registered for any {activeCategory !== 'All' ? activeCategory : ''} events yet.</p>
             ) : (
-                <div className="grid-cards mb-4">
+                <div className="grid-cards mb-8">
                     {registered.map(e => <EventCard key={e.id} event={e} />)}
                 </div>
             )}
 
-            <h2 className="mt-4">Explore More Events</h2>
-            <div className="grid-cards mb-4">
+            <h2 className="mt-12 mb-4">Discover More Events ({unregistered.length})</h2>
+            <div className="grid-cards mb-8">
                 {unregistered.length === 0 ? (
-                    <p className="text-secondary">No other events available in this room.</p>
+                    <p className="text-secondary p-8 glass-panel text-center">No other {activeCategory !== 'All' ? activeCategory : ''} events available in this room right now.</p>
                 ) : (
                     unregistered.map(e => <EventCard key={e.id} event={e} />)
                 )}
             </div>
 
-            <div className="mt-8 text-center">
-                <button className="btn btn-primary" style={{ padding: '1.5rem 3rem', fontSize: '1.2rem', borderRadius: '20px' }} onClick={() => window.location.hash = '#chat'}>
-                    💬 Open Room Discussion
-                </button>
-            </div>
+            {roomEvents.length > 0 && (
+                <div className="mt-16 text-center glass-panel" style={{ padding: '3rem' }}>
+                    <h3>Need help or have questions?</h3>
+                    <p className="mb-4">Chat with other students and admins in the room discussion.</p>
+                    <button className="btn btn-primary btn-lg" onClick={() => navigate('/chat')} style={{ padding: '1rem 2.5rem', borderRadius: '14px' }}>
+                        💬 Enter Room Chat
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

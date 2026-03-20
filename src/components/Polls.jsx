@@ -11,7 +11,6 @@ const Polls = () => {
     const roomPolls = (state.polls || []).filter(p => p.roomId === state.user.roomId);
 
     const handleAddOption = () => setOptions([...options, '']);
-    
     const handleOptionChange = (idx, val) => {
         const newOpts = [...options];
         newOpts[idx] = val;
@@ -71,13 +70,13 @@ const Polls = () => {
                 {state.user.role === 'admin' && <button className="btn btn-primary" onClick={() => setIsModalOpen(!isModalOpen)}>+ Create New Poll</button>}
             </div>
 
-            <div className="glass-panel mb-6" style={{ padding: '1.5rem', background: 'rgba(239, 68, 68, 0.05)', border: '1.5px solid var(--danger)' }}>
+            <div className="glass-panel mb-6" style={{ padding: '1rem 1.5rem', background: 'rgba(239, 68, 68, 0.05)', border: '1.5px solid var(--danger)' }}>
                 <div className="flex items-center gap-2">
                     <span style={{ fontSize: '1.5rem' }}>⚠️</span>
                     <strong style={{ color: 'var(--danger)' }}>Important Disclaimer:</strong>
                 </div>
-                <p style={{ margin: '0.5rem 0 0', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-                    Every student is allowed only <strong>one vote per poll</strong>. Once your vote is submitted, it <strong>cannot be edited, changed, or removed</strong>.
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    Every student is allowed only <strong>one vote per poll</strong>. Choices are <strong>permanent</strong>.
                 </p>
             </div>
 
@@ -112,37 +111,44 @@ const Polls = () => {
                     roomPolls.slice().reverse().map(p => {
                         const totalVotes = p.options.reduce((sum, opt) => sum + opt.votes, 0);
                         const userVoted = p.votedBy.includes(state.user.id);
+                        
+                        // Find the maximum votes to highlight the winner
+                        const maxVotes = Math.max(...p.options.map(o => o.votes));
+                        
                         return (
                             <div key={p.id} className="glass-panel poll-card" style={{ padding: '1.5rem', width: '100%', maxWidth: '450px', margin: '0 auto 2rem', border: `2px solid ${userVoted ? 'var(--success)' : 'var(--primary)'}` }}>
-                                <h3>{p.question}</h3>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '1rem', color: userVoted ? 'var(--success)' : 'var(--danger)' }}>
-                                    {userVoted ? '✓ Vote recorded.' : '⚠️ Choice is permanent.'}
+                                <h3 style={{ margin: '0 0 0.5rem 0' }}>{p.question}</h3>
+                                <p style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '1.5rem', color: userVoted ? 'var(--success)' : 'var(--danger)' }}>
+                                    {userVoted ? '✓ Your response has been recorded.' : '⚠️ Choice is permanent.'}
                                 </p>
                                 <div className="poll-options">
                                     {p.options.map(opt => {
                                         const percentage = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                                        const isLeading = totalVotes > 0 && opt.votes === maxVotes;
                                         return (
-                                            <div key={opt.id} className="poll-option mb-3" onClick={() => handleVote(p.id, opt.id)} style={{ cursor: !userVoted ? 'pointer' : 'default', padding: '0.75rem', borderRadius: '10px', background: 'rgba(0,0,0,0.03)' }}>
+                                            <div key={opt.id} className="poll-option mb-3" onClick={() => handleVote(p.id, opt.id)} style={{ cursor: !userVoted ? 'pointer' : 'default', padding: '0.75rem', borderRadius: '12px', background: isLeading && totalVotes > 0 ? 'rgba(99, 102, 241, 0.08)' : 'rgba(0,0,0,0.03)', border: isLeading && totalVotes > 0 ? '1px solid var(--primary)' : '1px solid transparent' }}>
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <div style={{ width: '16px', height: '16px', border: `2px solid ${userVoted ? 'var(--success)' : 'var(--primary)'}`, borderRadius: '3px', textAlign: 'center', lineHeight: '12px' }}>
-                                                        {userVoted && p.votedBy.includes(state.user.id) && '✓'}
+                                                    <div style={{ width: '16px', height: '16px', border: `2px solid ${userVoted ? 'var(--success)' : 'var(--primary)'}`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        {userVoted && p.votedBy.includes(state.user.id) && <div style={{ width: '8px', height: '8px', background: 'var(--success)', borderRadius: '50%' }} />}
                                                     </div>
-                                                    <div className="flex justify-between w-100 font-bold" style={{ fontSize: '0.9rem', width: '100%', display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span>{opt.text}</span>
+                                                    <div className="flex justify-between w-100 font-bold" style={{ fontSize: '0.9rem', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span>{opt.text} {isLeading && totalVotes > 0 && <span className="badge badge-success" style={{ fontSize: '0.6rem', marginLeft: '5px' }}>LEADING</span>}</span>
                                                         <span>{percentage}%</span>
                                                     </div>
                                                 </div>
                                                 <div style={{ height: '6px', background: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                                                    <div style={{ width: `${percentage}%`, height: '100%', background: userVoted ? 'var(--success)' : 'var(--primary)', transition: 'width 0.5s' }} />
+                                                    <div style={{ width: `${percentage}%`, height: '100%', background: userVoted ? 'var(--success)' : 'var(--primary)', transition: 'width 0.8s cubic-bezier(0.19, 1, 0.22, 1)' }} />
                                                 </div>
-                                                <small className="text-secondary">{opt.votes} votes</small>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <small className="text-secondary">{opt.votes} votes</small>
+                                                </div>
                                             </div>
                                         );
                                     })}
                                 </div>
-                                <div className="flex justify-between items-center mt-2">
-                                    <small>Total Participants: {totalVotes}</small>
-                                    {state.user.role === 'admin' && <button className="btn btn-danger btn-sm" onClick={() => handleDeletePoll(p.id)}>Delete</button>}
+                                <div className="flex justify-between items-center mt-4 pt-4 border-top">
+                                    <small>Total Participants: <strong>{totalVotes}</strong></small>
+                                    {state.user.role === 'admin' && <button className="btn btn-danger btn-sm" style={{ padding: '0.2rem 0.6rem' }} onClick={() => handleDeletePoll(p.id)}>Delete Poll</button>}
                                 </div>
                             </div>
                         );
