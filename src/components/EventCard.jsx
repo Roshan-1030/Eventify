@@ -1,8 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const EventCard = ({ event }) => {
     const { state, setState } = useAppState();
+    const navigate = useNavigate();
     const isRegistered = state.user?.role === 'student' && (event.attendees || []).some(a => String(a.id) === String(state.user.id));
 
     const handleRegister = (e) => {
@@ -39,7 +41,7 @@ const EventCard = ({ event }) => {
     };
 
     return (
-        <div className="glass-panel event-card" onClick={() => window.location.hash = `#event-details?id=${event.id}`} style={{ cursor: 'pointer' }}>
+        <div className="glass-panel event-card" onClick={() => navigate(`/event/${event.id}`)} style={{ cursor: 'pointer' }}>
             <div className="event-img-container">
                 <span className="event-category-badge">{event.category || 'Event'}</span>
                 <span className="event-date-badge">📅 {event.date}</span>

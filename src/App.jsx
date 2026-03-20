@@ -1,13 +1,11 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAppState } from './context/StateContext';
 
-// Layout & Core
+// Components
 import Header from './components/Header';
 import Login from './components/Login';
 import Register from './components/Register';
-
-// Dashboard Components
 import StudentDashboard from './components/StudentDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import Announcements from './components/Announcements';
@@ -17,53 +15,28 @@ import Reports from './components/Reports';
 import Gallery from './components/Gallery';
 import Polls from './components/Polls';
 import Groups from './components/Groups';
-
-// New Project Pages
 import About from './components/About';
 import Contact from './components/Contact';
+import EventDetails from './components/EventDetails';
 
-// Helper for protected routes
+// Protected Route Wrapper
 const AuthGuard = ({ children }) => {
     const { state } = useAppState();
     return state.user ? children : <Navigate to="/login" />;
 };
 
-const DashboardContainer = () => {
+const Layout = ({ children }) => (
+    <div className="app-container">
+        <Header />
+        <main className="main-content" style={{ padding: '2rem' }}>
+            {children}
+        </main>
+    </div>
+);
+
+const DashboardLayout = () => {
     const { state } = useAppState();
-    const [hash, setHash] = React.useState(window.location.hash || '#dashboard');
-
-    React.useEffect(() => {
-        const handleHashChange = () => setHash(window.location.hash || '#dashboard');
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
-    
-    // Internal Dashboard Router (using hashes to preserve existing state logic)
-    const renderSection = () => {
-        if (!state.user) return <Navigate to="/login" />;
-
-        if (hash === '#dashboard' || hash === '' || hash === '#index.html') {
-            return state.user.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />;
-        }
-        if (hash === '#announcements') return <Announcements />;
-        if (hash === '#chat') return <Chat />;
-        if (hash === '#feedback') return <Feedback />;
-        if (hash === '#reports') return <Reports />;
-        if (hash.startsWith('#gallery')) return <Gallery />;
-        if (hash === '#polls') return <Polls />;
-        if (hash.startsWith('#groups')) return <Groups />;
-        
-        return state.user.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />;
-    };
-
-    return (
-        <div className="app-container">
-            {!['#login', '#register'].some(h => hash.startsWith(h)) && <Header />}
-            <main className="main-content" style={{ padding: !['#login', '#register'].some(h => hash.startsWith(h)) ? '2rem' : '0' }}>
-                {renderSection()}
-            </main>
-        </div>
-    );
+    return state.user?.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />;
 };
 
 const App = () => {
@@ -71,24 +44,33 @@ const App = () => {
         <BrowserRouter>
             <Routes>
                 {/* Public Pages */}
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
+                <Route path="/about" element={<Layout><About /></Layout>} />
+                <Route path="/contact" element={<Layout><Contact /></Layout>} />
                 
                 {/* Auth Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
 
-                {/* Secure App Root */}
+                {/* Secure App Structure */}
                 <Route 
                     path="/" 
                     element={
                         <AuthGuard>
-                            <DashboardContainer />
+                            <Layout><DashboardLayout /></Layout>
                         </AuthGuard>
                     } 
                 />
 
-                {/* SPA Fallback */}
+                <Route path="/announcements" element={<AuthGuard><Layout><Announcements /></Layout></AuthGuard>} />
+                <Route path="/chat" element={<AuthGuard><Layout><Chat /></Layout></AuthGuard>} />
+                <Route path="/feedback" element={<AuthGuard><Layout><Feedback /></Layout></AuthGuard>} />
+                <Route path="/reports" element={<AuthGuard><Layout><Reports /></Layout></AuthGuard>} />
+                <Route path="/gallery" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
+                <Route path="/polls" element={<AuthGuard><Layout><Polls /></Layout></AuthGuard>} />
+                <Route path="/groups" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
+                <Route path="/event/:id" element={<AuthGuard><Layout><EventDetails /></Layout></AuthGuard>} />
+
+                {/* Redirect any legacy hash-links manually if they exist, or just fallback to root */}
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </BrowserRouter>

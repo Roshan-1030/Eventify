@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import EventCard from './EventCard';
 
 const AdminDashboard = () => {
     const { state, setState } = useAppState();
+    const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     // Admin state stats
@@ -89,12 +91,12 @@ const AdminDashboard = () => {
                     <h2 style={{ color: 'var(--success)', fontSize: '2.5rem' }}>{totalRegistrations}</h2>
                     <p style={{ fontWeight: 'bold' }}>Total Registrations</p>
                 </div>
-                <div className="glass-panel text-center" style={{ cursor: 'pointer' }} onClick={() => window.location.hash = '#reports'}>
+                <div className="glass-panel text-center" style={{ cursor: 'pointer' }} onClick={() => navigate('/reports')}>
                     <h2 style={{ color: 'var(--accent)', fontSize: '2.5rem' }}>{roomStudentsCount}</h2>
                     <p style={{ fontWeight: 'bold' }}>Room Students</p>
                     <small className="text-secondary" style={{ fontSize: '0.75rem' }}>Click to View Full Report</small>
                 </div>
-                <div className="glass-panel text-center" style={{ cursor: 'pointer' }} onClick={() => window.location.hash = '#feedback'}>
+                <div className="glass-panel text-center" style={{ cursor: 'pointer' }} onClick={() => navigate('/feedback')}>
                     <h2 style={{ fontSize: '2.5rem', color: 'var(--text-primary)' }}>{roomFeedbacks}</h2>
                     <p style={{ fontWeight: 'bold' }}>Room Feedback</p>
                     <small className="text-secondary" style={{ fontSize: '0.75rem' }}>Click to View</small>

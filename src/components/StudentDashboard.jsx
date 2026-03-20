@@ -11,7 +11,7 @@ const StudentDashboard = () => {
     const roomStudentsCount = (state.users || []).filter(u => u.role === 'student' && u.roomId === state.user.roomId).length;
 
     const shareRoomId = () => {
-        const shareLink = `${window.location.origin}${window.location.pathname}#login?room=${state.user.roomId}`;
+        const shareLink = `${window.location.origin}/login?room=${state.user.roomId}`;
         navigator.clipboard.writeText(shareLink).then(() => {
             alert(`Invitation link copied to clipboard!\n\nStudents using this link will have Room ID ${state.user.roomId} pre-filled.`);
         });
