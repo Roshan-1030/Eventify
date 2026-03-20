@@ -24,7 +24,14 @@ const initialState = {
     announcements: [],
     chats: [],
     polls: [],
-    groups: []
+    groups: [],
+    contactInfo: {
+        email: 'support@eventify.edu',
+        phone: '+91 98765 43210',
+        address: 'Academic Block-A, University Campus, New Delhi',
+        instagram: '@eventify_official',
+        twitter: '@eventify_org'
+    }
 };
 
 const StateContext = createContext();

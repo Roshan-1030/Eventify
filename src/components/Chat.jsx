@@ -7,8 +7,6 @@ const Chat = () => {
     const chatRef = useRef(null);
 
     const roomChats = (state.chats || []).filter(c => c.roomId === state.user.roomId);
-    
-    // Check if the current room is muted (Global Mute)
     const isGlobalMuted = (state.mutedRooms || []).includes(state.user.roomId);
     const isAdmin = state.user.role === 'admin';
 
@@ -21,8 +19,6 @@ const Chat = () => {
     const handleSend = (e) => {
         e.preventDefault();
         if (!msg.trim()) return;
-        
-        // Prevent if muted and not admin
         if (isGlobalMuted && !isAdmin) return;
 
         const newMsg = {
@@ -40,24 +36,16 @@ const Chat = () => {
 
     const toggleGlobalMute = () => {
         if (!isAdmin) return;
-        
         setState(prev => {
             const muted = [...(prev.mutedRooms || [])];
-            if (muted.includes(state.user.roomId)) {
-                return { ...prev, mutedRooms: muted.filter(id => id !== state.user.roomId) };
-            } else {
-                return { ...prev, mutedRooms: [...muted, state.user.roomId] };
-            }
+            return { ...prev, mutedRooms: muted.includes(state.user.roomId) ? muted.filter(id => id !== state.user.roomId) : [...muted, state.user.roomId] };
         });
     };
 
     const handleClearChat = () => {
         if (!isAdmin) return;
-        if (window.confirm("Are you sure you want to clear all messages for this room?")) {
-            setState(prev => ({ 
-                ...prev, 
-                chats: (prev.chats || []).filter(c => c.roomId !== state.user.roomId) 
-            }));
+        if (window.confirm("Are you sure you want to clear all messages?")) {
+            setState(prev => ({ ...prev, chats: (prev.chats || []).filter(c => c.roomId !== state.user.roomId) }));
         }
     };
 
@@ -71,9 +59,9 @@ const Chat = () => {
                 {isAdmin && (
                     <div className="flex gap-2">
                         <button className={`btn btn-sm ${isGlobalMuted ? 'btn-success' : 'btn-outline'}`} onClick={toggleGlobalMute}>
-                            {isGlobalMuted ? '🔊 Unmute Entire Room' : '🔇 Mute Entire Room'}
+                            {isGlobalMuted ? '🔊 Unmute Room' : '🔇 Mute Room'}
                         </button>
-                        <button className="btn btn-sm btn-outline text-danger" onClick={handleClearChat}>🗑️ Reset Chat</button>
+                        <button className="btn btn-sm btn-outline text-danger" onClick={handleClearChat}>🗑️ Reset</button>
                     </div>
                 )}
             </div>
@@ -81,12 +69,21 @@ const Chat = () => {
             <div className="glass-panel" style={{ height: '70vh', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.02)', borderRadius: '15px' }} ref={chatRef}>
                     {roomChats.length === 0 ? (
-                        <div className="text-center p-12 text-secondary">No messages yet. Be the first to start the conversation!</div>
+                        <div className="text-center p-12 text-secondary">No messages yet.</div>
                     ) : (
                         roomChats.map((c, i) => (
                             <div key={i} className={`mb-4 flex flex-col ${c.userId === state.user.id ? 'items-end' : 'items-start'}`}>
                                 <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '4px' }}>{c.userName}</div>
-                                <div className="p-3" style={{ background: c.userId === state.user.id ? 'var(--primary-gradient)' : 'white', color: c.userId === state.user.id ? 'white' : 'black', borderRadius: '18px', maxWidth: '75%', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', border: '1px solid var(--border)' }}>
+                                <div className="p-3" style={{ 
+                                    background: c.userId === state.user.id ? 'var(--primary-gradient)' : 'white', 
+                                    color: c.userId === state.user.id ? 'white' : 'black', 
+                                    borderRadius: '18px', 
+                                    maxWidth: '75%', 
+                                    width: 'fit-content', // Adjustable according to message size
+                                    wordBreak: 'break-word',
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)', 
+                                    border: '1px solid var(--border)' 
+                                }}>
                                     {c.text}
                                     <div style={{ textAlign: 'right', fontSize: '0.65rem', marginTop: '4px', opacity: 0.8 }}>{c.time}</div>
                                 </div>
@@ -96,9 +93,7 @@ const Chat = () => {
                 </div>
 
                 {isGlobalMuted && !isAdmin ? (
-                    <div className="text-center p-4 bg-danger text-white rounded-lg font-bold">
-                        ⚠️ This room has been muted by the administrator. Only admins can speak.
-                    </div>
+                    <div className="text-center p-4 bg-danger text-white rounded-lg font-bold">⚠️ Discussion is currently muted by admin.</div>
                 ) : (
                     <form onSubmit={handleSend} className="flex gap-2 p-2 bg-white rounded-full border">
                         <input type="text" className="form-control" placeholder="Write something..." value={msg} onChange={e => setMsg(e.target.value)} style={{ border: 'none', background: 'transparent' }} />
