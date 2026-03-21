@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../context/StateContext';
 
 const Chat = () => {
-    const { state } = useAppState();
+    const { state, setState } = useAppState();
     const [msg, setMsg] = useState('');
     const chatRef = useRef(null);
 
@@ -30,13 +30,13 @@ const Chat = () => {
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
-        state.setState(prev => ({ ...prev, chats: [...(prev.chats || []), newMsg] }));
+        setState(prev => ({ ...prev, chats: [...(prev.chats || []), newMsg] }));
         setMsg('');
     };
 
     const toggleGlobalMute = () => {
         if (!isAdmin) return;
-        state.setState(prev => {
+        setState(prev => {
             const muted = [...(prev.mutedRooms || [])];
             return { ...prev, mutedRooms: muted.includes(state.user.roomId) ? muted.filter(id => id !== state.user.roomId) : [...muted, state.user.roomId] };
         });
