@@ -1,11 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppState } from './context/StateContext';
-
-// Components
 import Header from './components/Header';
-import Login from './components/Login';
-import Register from './components/Register';
+import Login from './auth/Login';
+import Register from './auth/Register';
 import StudentDashboard from './components/StudentDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import Announcements from './components/Announcements';
@@ -20,7 +18,7 @@ import Contact from './components/Contact';
 import EventDetails from './components/EventDetails';
 import Profile from './components/Profile';
 
-// Protected Route Wrapper
+
 const AuthGuard = ({ children }) => {
     const { state } = useAppState();
     return state.user ? children : <Navigate to="/login" />;
@@ -47,34 +45,34 @@ const App = () => {
                 {/* Public Pages */}
                 <Route path="/about" element={<Layout><About /></Layout>} />
                 <Route path="/contact" element={<Layout><Contact /></Layout>} />
-                
+
                 {/* Auth Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
 
                 {/* Secure App Structure */}
-                <Route 
-                    path="/" 
+                <Route
+                    path="/"
                     element={
                         <AuthGuard>
                             <Layout><DashboardLayout /></Layout>
                         </AuthGuard>
-                    } 
+                    }
                 />
 
                 <Route path="/announcements" element={<AuthGuard><Layout><Announcements /></Layout></AuthGuard>} />
                 <Route path="/chat" element={<AuthGuard><Layout><Chat /></Layout></AuthGuard>} />
                 <Route path="/feedback" element={<AuthGuard><Layout><Feedback /></Layout></AuthGuard>} />
                 <Route path="/reports" element={<AuthGuard><Layout><Reports /></Layout></AuthGuard>} />
-                
+
                 <Route path="/gallery" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
                 <Route path="/gallery/:folderId" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
-                
+
                 <Route path="/polls" element={<AuthGuard><Layout><Polls /></Layout></AuthGuard>} />
-                
+
                 <Route path="/groups" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
                 <Route path="/groups/:groupId" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
-                
+
                 <Route path="/event/:id" element={<AuthGuard><Layout><EventDetails /></Layout></AuthGuard>} />
                 <Route path="/profile" element={<AuthGuard><Layout><Profile /></Layout></AuthGuard>} />
 
