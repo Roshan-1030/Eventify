@@ -11,7 +11,7 @@ const Groups = () => {
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDesc, setNewGroupDesc] = useState('');
     const [chatInput, setChatInput] = useState('');
-    const [inspectedUser, setInspectedUser] = useState(null); // For admin profile inspection
+    const [inspectedUser, setInspectedUser] = useState(null); 
     const chatRef = useRef(null);
 
     const groupId = routeGroupId ? parseInt(routeGroupId) : null;
@@ -53,7 +53,7 @@ const Groups = () => {
         } else if (action === 'demote') {
             g.members[mIdx] = { ...g.members[mIdx], roleInGroup: 'student' };
         } else if (action === 'remove') {
-            if (!window.confirm("Remove this member from the group?")) return;
+            if (!window.confirm("Remove member?")) return;
             g.members.splice(mIdx, 1);
         }
 
@@ -73,17 +73,6 @@ const Groups = () => {
         setChatInput('');
     };
 
-    const handleRequest = (userId, accept) => {
-        const groupsCopy = [...state.groups];
-        const idx = groupsCopy.findIndex(g => g.id === currentGroup.id);
-        const g = { ...groupsCopy[idx], members: [...groupsCopy[idx].members], requests: [...groupsCopy[idx].requests] };
-        const req = g.requests.find(r => r.id === userId);
-        g.requests = g.requests.filter(r => r.id !== userId);
-        if (accept && req) g.members.push({ ...req, roleInGroup: 'student' });
-        groupsCopy[idx] = g;
-        setState(prev => ({ ...prev, groups: groupsCopy }));
-    };
-
     const toggleGroupMute = () => {
         const groupsCopy = [...state.groups];
         const idx = groupsCopy.findIndex(g => g.id === currentGroup.id);
@@ -101,8 +90,8 @@ const Groups = () => {
             return (
                 <div className="text-center p-12 glass-panel">
                     <h1>Private Group</h1>
-                    <p>Contact an admin to join <strong>{currentGroup.name}</strong>.</p>
-                    <button className="btn btn-primary mt-4" onClick={() => navigate('/groups')}>Back to Groups</button>
+                    <p>Access restricted to <strong>{currentGroup.name}</strong> members.</p>
+                    <button className="btn btn-primary mt-4" onClick={() => navigate('/groups')}>Back</button>
                 </div>
             );
         }
@@ -110,7 +99,7 @@ const Groups = () => {
         return (
             <div className="group-details">
                 <div className="flex justify-between items-center mb-6">
-                    <button className="btn btn-outline" onClick={() => navigate('/groups')}>← All Groups</button>
+                    <button className="btn btn-outline" onClick={() => navigate('/groups')}>← Back</button>
                     <div className="flex gap-2">
                         {isGroupAdmin && <button className={`btn btn-sm ${currentGroup.isMuted ? 'btn-success' : 'btn-outline'}`} onClick={toggleGroupMute}>{currentGroup.isMuted ? '🔊 Unmute Room' : '🔇 Mute Room'}</button>}
                         {isGlobalAdmin && <button className="btn btn-sm btn-outline text-danger" onClick={() => { if(window.confirm('Delete group?')) setState(prev => ({ ...prev, groups: prev.groups.filter(g => g.id !== currentGroup.id) })); navigate('/groups'); }}>🗑️ Delete</button>}
@@ -124,70 +113,50 @@ const Groups = () => {
                             {currentGroup.isMuted && <span className="badge badge-danger">CHAT MUTED</span>}
                         </div>
                         
-                        <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', margin: '1rem 0', padding: '1rem', background: 'rgba(0,0,0,0.02)', borderRadius: '12px' }}>
+                        <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', margin: '1rem 0', padding: '0.5rem', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                             {currentGroup.messages.map((msg, i) => (
-                                <div key={i} className={`mb-4 flex flex-col ${msg.userId === state.user.id ? 'items-end' : 'items-start'}`}>
-                                    <div style={{ fontSize: '0.7rem', fontWeight: 800, marginBottom: '2px', cursor: (isGlobalAdmin && msg.userId !== state.user.id) ? 'pointer' : 'default' }} 
-                                         onClick={() => isGlobalAdmin && msg.userId !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === msg.userId))}>
-                                        {msg.userName} {isGlobalAdmin && msg.userId !== state.user.id && '🔍'}
+                                <div key={i} className="mb-4" style={{ 
+                                    borderLeft: msg.userId === state.user.id ? '3px solid var(--primary)' : '3px solid transparent', 
+                                    paddingLeft: '1rem' 
+                                }}>
+                                    <div className="flex items-baseline gap-2 mb-1">
+                                        <strong style={{ fontSize: '0.9rem', color: msg.userId === state.user.id ? 'var(--primary)' : 'inherit', cursor: (isGlobalAdmin && msg.userId !== state.user.id) ? 'pointer' : 'default' }} 
+                                                 onClick={() => isGlobalAdmin && msg.userId !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === msg.userId))}>
+                                            {msg.userId === state.user.id ? 'You' : msg.userName} {(isGlobalAdmin && msg.userId !== state.user.id) && '🔍'}
+                                        </strong>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', opacity: 0.6 }}>{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
-                                    <div className="p-3 rounded-lg" style={{ 
-                                        maxWidth: '80%', 
-                                        width: 'fit-content', // Adjustable according to message size
-                                        wordBreak: 'break-word',
-                                        background: msg.userId === state.user.id ? 'var(--primary-gradient)' : 'white', 
-                                        color: msg.userId === state.user.id ? 'white' : 'black', 
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)', 
-                                        border: '1px solid var(--border)' 
-                                    }}>
-                                        {msg.text}
-                                    </div>
+                                    <div style={{ fontSize: '0.95rem', color: '#000000', lineHeight: '1.4' }}>{msg.text}</div>
                                 </div>
                             ))}
                         </div>
 
                         {(!currentGroup.isMuted || isGroupAdmin) ? (
-                            <form onSubmit={handleSendMessage} className="flex gap-2 p-2 bg-white rounded-full border">
-                                <input type="text" className="form-control" placeholder="Type a message..." value={chatInput} onChange={e => setChatInput(e.target.value)} style={{ border: 'none', background: 'transparent' }} />
-                                <button type="submit" className="btn btn-primary" style={{ borderRadius: '50px' }}>Send</button>
+                            <form onSubmit={handleSendMessage} className="flex gap-2">
+                                <input type="text" className="form-control" placeholder="Share something..." value={chatInput} onChange={e => setChatInput(e.target.value)} />
+                                <button type="submit" className="btn btn-primary px-6">Send</button>
                             </form>
-                        ) : <div className="text-center p-3 text-secondary italic">This chat is muted by admin.</div>}
+                        ) : <div className="text-center p-3 text-secondary italic">Chat is currently muted.</div>}
                     </div>
 
                     <div className="flex flex-col gap-6">
-                        {isGroupAdmin && currentGroup.requests?.length > 0 && (
-                            <div className="glass-panel text-sm">
-                                <h3 className="mb-4">Pending Access</h3>
-                                {currentGroup.requests.map(req => (
-                                    <div key={req.id} className="flex justify-between items-center mb-2 p-2 bg-light rounded">
-                                        <strong>{req.name}</strong>
-                                        <div className="flex gap-1">
-                                            <button className="btn btn-sm btn-primary" onClick={() => handleRequest(req.id, true)}>✔</button>
-                                            <button className="btn btn-sm btn-outline" onClick={() => handleRequest(req.id, false)}>✖</button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
                         <div className="glass-panel">
                             <h3>Participants ({currentGroup.members.length})</h3>
                             <div className="mt-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                                 {currentGroup.members.map(m => (
                                     <div key={m.id} className="flex items-start justify-between mb-3 pb-3 border-bottom">
                                         <div className="flex items-center gap-3">
-                                            <div className="avatar" style={{ width: '35px', height: '35px', fontSize: '0.8rem', cursor: (isGlobalAdmin && m.id !== state.user.id) ? 'pointer' : 'default' }} onClick={() => isGlobalAdmin && m.id !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === m.id))}>
+                                            <div className="avatar" style={{ width: '30px', height: '30px', fontSize: '0.7rem', cursor: (isGlobalAdmin && m.id !== state.user.id) ? 'pointer' : 'default' }} onClick={() => isGlobalAdmin && m.id !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === m.id))}>
                                                 {m.name.charAt(0)}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{m.name} {m.roleInGroup === 'admin' && <span className="badge badge-admin ml-1" style={{ fontSize: '0.6rem' }}>Admin</span>} {m.roleInGroup === 'co-admin' && <span className="badge badge-primary ml-1" style={{ fontSize: '0.6rem' }}>Co-Admin</span>}</div>
-                                                <div style={{ fontSize: '0.7rem' }} className="text-secondary">{m.email}</div>
+                                                <div style={{ fontWeight: 800, fontSize: '0.8rem' }}>{m.name} {m.roleInGroup === 'admin' && <span className="badge badge-admin ml-1" style={{ fontSize: '0.5rem' }}>Admin</span>} {m.roleInGroup === 'co-admin' && <span className="badge badge-primary ml-1" style={{ fontSize: '0.5rem' }}>Co-Admin</span>}</div>
                                             </div>
                                         </div>
                                         {isGroupAdmin && m.id !== state.user.id && m.roleInGroup !== 'admin' && (
                                             <div className="flex gap-1">
-                                                <button className="btn btn-sm btn-outline" title="Promote/Demote" onClick={() => handleMemberAction(m.id, m.roleInGroup === 'co-admin' ? 'demote' : 'promote')}>{m.roleInGroup === 'co-admin' ? '⬇' : '⬆'}</button>
-                                                <button className="btn btn-sm btn-outline text-danger" title="Remove" onClick={() => handleMemberAction(m.id, 'remove')}>✖</button>
+                                                <button className="btn btn-sm btn-outline btn-xs" onClick={() => handleMemberAction(m.id, m.roleInGroup === 'co-admin' ? 'demote' : 'promote')}>{m.roleInGroup === 'co-admin' ? '⬇' : '⬆'}</button>
+                                                <button className="btn btn-sm btn-outline btn-xs text-danger" onClick={() => handleMemberAction(m.id, 'remove')}>✖</button>
                                             </div>
                                         )}
                                     </div>
@@ -197,7 +166,6 @@ const Groups = () => {
                     </div>
                 </div>
 
-                {/* Profile Modal */}
                 {inspectedUser && (
                     <div className="modal-overlay" style={{ display: 'flex' }} onClick={() => setInspectedUser(null)}>
                         <div className="glass-panel" style={{ width: '90%', maxWidth: '400px', padding: '2rem' }} onClick={e => e.stopPropagation()}>
@@ -221,7 +189,7 @@ const Groups = () => {
     return (
         <div className="groups-page">
             <div className="flex justify-between items-center mb-6">
-                <div><h1>Communities</h1><p>Room: <strong>{state.user.roomId}</strong></p></div>
+                <div><h1>Communities</h1><p>Active Room: <strong>{state.user.roomId}</strong></p></div>
                 {state.user.role === 'admin' && <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>+ New Group</button>}
             </div>
 
@@ -245,7 +213,6 @@ const Groups = () => {
                         <p className="text-truncate">{g.description}</p>
                         <div className="mt-4 pt-4 border-top flex justify-between items-center">
                             <span className="badge badge-primary">{g.members.length} Members</span>
-                            {g.isMuted && <span className="badge badge-danger">Muted</span>}
                         </div>
                     </div>
                 ))}
