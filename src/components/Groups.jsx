@@ -106,6 +106,14 @@ const Groups = () => {
         } catch(e) { console.error(e); }
     };
 
+    const handleDirectJoin = async (targetGroup) => {
+        try {
+            const newRequests = [...(targetGroup.requests || []), { id: state.user.id, name: state.user.name, email: state.user.email }];
+            await updateDoc(doc(db, "groups", targetGroup.id), { requests: newRequests });
+            alert(`Request sent to join ${targetGroup.name}!`);
+        } catch(e) { console.error(e); }
+    };
+
     if (groupId && currentGroup) {
         const isGlobalAdmin = state.user.role === 'admin';
         const memberSelf = currentGroup.members.find(m => String(m.id) === String(state.user.id));
@@ -266,15 +274,44 @@ const Groups = () => {
             )}
 
             <div className="grid-cards">
-                {roomGroups.length === 0 ? <p className="text-secondary">Explore new communities here.</p> : roomGroups.map(g => (
-                    <div key={g.id} className="glass-panel" onClick={() => navigate(`/groups/${g.id}`)} style={{ cursor: 'pointer' }}>
-                        <h3>{g.name}</h3>
-                        <p className="text-truncate">{g.description}</p>
-                        <div className="mt-4 pt-4 border-top flex justify-between items-center">
-                            <span className="badge badge-primary">{g.members.length} Members</span>
+                {roomGroups.length === 0 ? <p className="text-secondary">Explore new communities here.</p> : roomGroups.map(g => {
+                    const isMember = (g.members || []).some(m => String(m.id) === String(state.user.id)) || state.user?.role === 'admin';
+                    const hasRequested = (g.requests || []).some(r => String(r.id) === String(state.user.id));
+                    
+                    return (
+                        <div key={g.id} className="glass-panel group-card" onClick={() => isMember && navigate(`/groups/${g.id}`)} style={{ cursor: isMember ? 'pointer' : 'default', transition: 'all 0.3s ease' }}>
+                            <div className="flex justify-between items-start">
+                                <h3>{g.name}</h3>
+                                {isMember && <span className="badge badge-success">✓ Member</span>}
+                            </div>
+                            <p className="text-truncate" style={{ minHeight: '3rem' }}>{g.description}</p>
+                            
+                            <div className="mt-4 pt-4 border-top flex justify-between items-center">
+                                <span className="badge badge-primary">{g.members.length} Members</span>
+                                
+                                {!isMember && state.user?.role === 'student' && (
+                                    hasRequested ? (
+                                        <button className="btn btn-sm btn-outline disabled" disabled>⏳ Pending</button>
+                                    ) : (
+                                        <button 
+                                            className="btn btn-sm btn-primary" 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                // Temporarily set as "current" to use existing join logic
+                                                // Or just invoke a specialized direct join
+                                                handleDirectJoin(g);
+                                            }}
+                                        >
+                                            Join Group
+                                        </button>
+                                    )
+                                )}
+                                
+                                {isMember && <button className="btn btn-sm btn-outline" onClick={() => navigate(`/groups/${g.id}`)}>Enter Chat →</button>}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
