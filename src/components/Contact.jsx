@@ -29,7 +29,7 @@ const Contact = () => {
                 )}
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
+            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                 {isEditing ? (
                     <div className="glass-panel" style={{ padding: '2.5rem' }}>
                         <h2 className="mb-4">Update Contact Details</h2>
@@ -74,13 +74,7 @@ const Contact = () => {
                     </div>
                 )}
 
-                <div className="glass-panel" style={{ height: '100%', minHeight: '400px', padding: '0', overflow: 'hidden' }}>
-                    <iframe 
-                        title="google-maps"
-                        src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d112063.14144346281!2d76.9930198031542!3d28.620095819001383!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d19d582e38859%3A0x2cf5e38169866b7!2sDelhi!5e0!3m2!1sen!2sin!4v1711123456789!5m2!1sen!2sin`}
-                        width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy">
-                    </iframe>
-                </div>
+
             </div>
         </div>
     );

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase';
+import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 const Announcements = () => {
     const { state, setState } = useAppState();
@@ -14,7 +16,7 @@ const Announcements = () => {
     const [message, setMessage] = useState('');
     const [selectedEvent, setSelectedEvent] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!title || !message) {
             alert("Please fill in both title and message.");
@@ -31,7 +33,6 @@ const Announcements = () => {
         }
 
         const newAnn = {
-            id: Date.now(),
             roomId: state.user.roomId,
             type,
             title: finalTitle,
@@ -39,21 +40,21 @@ const Announcements = () => {
             date: new Date().toISOString()
         };
 
-        setState(prev => ({
-            ...prev,
-            announcements: [...(prev.announcements || []), newAnn]
-        }));
-
-        setTitle(''); setMessage(''); setType('general'); setSelectedEvent('');
-        setIsModalOpen(false);
+        try {
+            await addDoc(collection(db, "announcements"), newAnn);
+            setTitle(''); setMessage(''); setType('general'); setSelectedEvent('');
+            setIsModalOpen(false);
+        } catch (err) {
+            console.error("Failed to post:", err);
+            alert("Upload failed.");
+        }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (!window.confirm('Delete this announcement?')) return;
-        setState(prev => ({
-            ...prev,
-            announcements: prev.announcements.filter(a => a.id !== id)
-        }));
+        try {
+            await deleteDoc(doc(db, "announcements", id));
+        } catch (err) { }
     };
 
     return (
@@ -73,10 +74,13 @@ const Announcements = () => {
                     {roomAnnouncements.map(a => (
                         <div key={a.id} className="glass-panel" style={{ padding: '1.5rem', borderLeft: `4px solid var(${a.type === 'reminder' ? '--accent' : '--primary'})` }}>
                             <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <span className="badge" style={{ background: `var(${a.type === 'reminder' ? '--accent' : '--primary'})`, color: 'white' }}>
                                         {a.type === 'reminder' ? '⏰ Reminder' : '📢 General'}
                                     </span>
+                                    {Date.now() - new Date(a.date).getTime() < 86400000 && (
+                                        <span className="badge badge-success" style={{ animation: 'pulse 2s infinite' }}>✨ New!</span>
+                                    )}
                                     <small className="text-secondary">{new Date(a.date).toLocaleString()}</small>
                                 </div>
                                 {!isStudent && <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleDelete(a.id)}>Delete</button>}

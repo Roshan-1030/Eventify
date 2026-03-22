@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase';
+import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const Groups = () => {
     const { state, setState } = useAppState();
@@ -14,19 +16,18 @@ const Groups = () => {
     const [inspectedUser, setInspectedUser] = useState(null); 
     const chatRef = useRef(null);
 
-    const groupId = routeGroupId ? parseInt(routeGroupId) : null;
+    const groupId = routeGroupId || null;
     const roomGroups = (state.groups || []).filter(g => g.roomId === state.user.roomId);
-    const currentGroup = groupId ? (state.groups || []).find(g => g.id === groupId) : null;
+    const currentGroup = groupId ? (state.groups || []).find(g => String(g.id) === groupId) : null;
 
     useEffect(() => {
         if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }, [currentGroup?.messages]);
 
-    const handleCreateGroup = (e) => {
+    const handleCreateGroup = async (e) => {
         e.preventDefault();
         if (!newGroupName.trim()) return alert('Group name is required');
         const newGroup = {
-            id: Date.now(),
             roomId: state.user.roomId,
             name: newGroupName,
             description: newGroupDesc,
@@ -35,49 +36,51 @@ const Groups = () => {
             messages: [],
             isMuted: false,
         };
-        setState(prev => ({ ...prev, groups: [...(prev.groups || []), newGroup] }));
-        setNewGroupName(''); setNewGroupDesc(''); setIsCreateModalOpen(false);
+        try {
+            await addDoc(collection(db, "groups"), newGroup);
+            setNewGroupName(''); setNewGroupDesc(''); setIsCreateModalOpen(false);
+        } catch(e) { console.error(e); }
     };
 
-    const handleMemberAction = (userId, action) => {
+    const handleMemberAction = async (userId, action) => {
         if (!currentGroup) return;
-        const groupsCopy = [...state.groups];
-        const idx = groupsCopy.findIndex(g => g.id === currentGroup.id);
-        const g = { ...groupsCopy[idx], members: [...groupsCopy[idx].members] };
         
-        const mIdx = g.members.findIndex(m => String(m.id) === String(userId));
+        const mIdx = currentGroup.members.findIndex(m => String(m.id) === String(userId));
         if (mIdx === -1) return;
 
+        const updatedMembers = [...currentGroup.members];
+
         if (action === 'promote') {
-            g.members[mIdx] = { ...g.members[mIdx], roleInGroup: 'co-admin' };
+            updatedMembers[mIdx] = { ...updatedMembers[mIdx], roleInGroup: 'co-admin' };
         } else if (action === 'demote') {
-            g.members[mIdx] = { ...g.members[mIdx], roleInGroup: 'student' };
+            updatedMembers[mIdx] = { ...updatedMembers[mIdx], roleInGroup: 'student' };
         } else if (action === 'remove') {
             if (!window.confirm("Remove member?")) return;
-            g.members.splice(mIdx, 1);
+            updatedMembers.splice(mIdx, 1);
         }
 
-        groupsCopy[idx] = g;
-        setState(prev => ({ ...prev, groups: groupsCopy }));
+        try {
+            await updateDoc(doc(db, "groups", currentGroup.id), { members: updatedMembers });
+        } catch(e) { console.error(e); }
     };
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!chatInput.trim() || !currentGroup) return;
-        const groupsCopy = [...state.groups];
-        const idx = groupsCopy.findIndex(g => g.id === currentGroup.id);
-        const g = { ...groupsCopy[idx], messages: [...(groupsCopy[idx].messages || [])] };
-        g.messages.push({ userId: state.user.id, userName: state.user.name, text: chatInput, time: Date.now() });
-        groupsCopy[idx] = g;
-        setState(prev => ({ ...prev, groups: groupsCopy }));
-        setChatInput('');
+
+        const newMessages = [...(currentGroup.messages || [])];
+        newMessages.push({ userId: state.user.id, userName: state.user.name, text: chatInput, time: Date.now() });
+        
+        try {
+            await updateDoc(doc(db, "groups", currentGroup.id), { messages: newMessages });
+            setChatInput('');
+        } catch(e) { console.error(e); }
     };
 
-    const toggleGroupMute = () => {
-        const groupsCopy = [...state.groups];
-        const idx = groupsCopy.findIndex(g => g.id === currentGroup.id);
-        groupsCopy[idx] = { ...groupsCopy[idx], isMuted: !groupsCopy[idx].isMuted };
-        setState(prev => ({ ...prev, groups: groupsCopy }));
+    const toggleGroupMute = async () => {
+        try {
+            await updateDoc(doc(db, "groups", currentGroup.id), { isMuted: !currentGroup.isMuted });
+        } catch(e) { console.error(e); }
     };
 
     if (groupId && currentGroup) {
@@ -102,7 +105,7 @@ const Groups = () => {
                     <button className="btn btn-outline" onClick={() => navigate('/groups')}>← Back</button>
                     <div className="flex gap-2">
                         {isGroupAdmin && <button className={`btn btn-sm ${currentGroup.isMuted ? 'btn-success' : 'btn-outline'}`} onClick={toggleGroupMute}>{currentGroup.isMuted ? '🔊 Unmute Room' : '🔇 Mute Room'}</button>}
-                        {isGlobalAdmin && <button className="btn btn-sm btn-outline text-danger" onClick={() => { if(window.confirm('Delete group?')) setState(prev => ({ ...prev, groups: prev.groups.filter(g => g.id !== currentGroup.id) })); navigate('/groups'); }}>🗑️ Delete</button>}
+                        {isGlobalAdmin && <button className="btn btn-sm btn-outline text-danger" onClick={async () => { if(window.confirm('Delete group?')) { try { await deleteDoc(doc(db, "groups", currentGroup.id)); navigate('/groups'); } catch(e){} } }}>🗑️ Delete</button>}
                     </div>
                 </div>
 

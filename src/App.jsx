@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAppState } from './context/StateContext';
 import Header from './components/Header';
 import Login from './auth/Login';
@@ -17,6 +17,7 @@ import About from './components/About';
 import Contact from './components/Contact';
 import EventDetails from './components/EventDetails';
 import Profile from './components/Profile';
+import Payment from './components/Payment';
 
 
 const AuthGuard = ({ children }) => {
@@ -35,16 +36,41 @@ const Layout = ({ children }) => (
 
 const DashboardLayout = () => {
     const { state } = useAppState();
-    return state.user?.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />;
+    const location = useLocation();
+
+    useEffect(() => {
+        if (location.hash) {
+            const id = location.hash.substring(1);
+            setTimeout(() => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        }
+    }, [location]);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+            {state.user?.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />}
+            <div id="about" style={{ paddingTop: '2rem' }}>
+                <About />
+            </div>
+            <div id="contact" style={{ paddingTop: '2rem' }}>
+                <Contact />
+            </div>
+            <div id="feedback" style={{ paddingTop: '2rem' }}>
+                <Feedback />
+            </div>
+        </div>
+    );
 };
 
 const App = () => {
     return (
         <BrowserRouter>
             <Routes>
-                {/* Public Pages */}
-                <Route path="/about" element={<Layout><About /></Layout>} />
-                <Route path="/contact" element={<Layout><Contact /></Layout>} />
+                {/* Public Pages (Moved to Dashboard) */}
 
                 {/* Auth Routes */}
                 <Route path="/login" element={<Login />} />
@@ -62,7 +88,6 @@ const App = () => {
 
                 <Route path="/announcements" element={<AuthGuard><Layout><Announcements /></Layout></AuthGuard>} />
                 <Route path="/chat" element={<AuthGuard><Layout><Chat /></Layout></AuthGuard>} />
-                <Route path="/feedback" element={<AuthGuard><Layout><Feedback /></Layout></AuthGuard>} />
                 <Route path="/reports" element={<AuthGuard><Layout><Reports /></Layout></AuthGuard>} />
 
                 <Route path="/gallery" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
@@ -74,6 +99,7 @@ const App = () => {
                 <Route path="/groups/:groupId" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
 
                 <Route path="/event/:id" element={<AuthGuard><Layout><EventDetails /></Layout></AuthGuard>} />
+                <Route path="/payment/:eventId" element={<AuthGuard><Layout><Payment /></Layout></AuthGuard>} />
                 <Route path="/profile" element={<AuthGuard><Layout><Profile /></Layout></AuthGuard>} />
 
                 {/* Redirect any legacy hash-links manually if they exist, or just fallback to root */}

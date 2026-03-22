@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase.js';
+import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import EventCard from './EventCard';
 
 const AdminDashboard = () => {
     const { state, setState } = useAppState();
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+
     
     // Stats calc
     const roomEvents = (state.events || []).filter(e => e.roomId === state.user.roomId);
@@ -31,32 +35,86 @@ const AdminDashboard = () => {
     const [coordinator, setCoordinator] = useState("");
     const [description, setDescription] = useState("");
     const [imageBase64, setImageBase64] = useState("");
+    const [fee, setFee] = useState("0");
+    const [qrImageBase64, setQrImageBase64] = useState("");
     const [error, setError] = useState("");
 
-    const handleCreateEvent = (e) => {
+    // 🔬 Utility to resize images before Firestore Upload (avoids 1MB limit)
+    const resizeImage = (base64, maxWidth = 600) => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale = maxWidth / img.width;
+                if (scale >= 1) return resolve(base64);
+                
+                canvas.width = maxWidth;
+                canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compressing to JPEG 70%
+            };
+        });
+    };
+
+    const handleCreateEvent = async (e) => {
         e.preventDefault();
         setError("");
+        setLoading(true);
+
         if (!title || !date || !category || !time || !coordinator || !description) {
             setError("Please fill all required fields!");
+            setLoading(false);
             return;
         }
 
-        const newEvent = {
-            id: Date.now(),
-            title, date, category, time, location, description, 
-            desc: description,
-            headCoordinator: coordinator,
-            coordinators: [{ name: coordinator, role: 'Head Coordinator' }],
-            image: imageBase64 || "https://via.placeholder.com/300x180?text=Event",
-            roomId: state.user.roomId,
-            attendees: [],
-            registrationOpen: true
-        };
+        try {
+            // 🧠 Resize images before sending to cloud to keep document under 1MB
+            const fallBackImage = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22200%22%20viewBox%3D%220%200%20400%20200%22%3E%3Crect%20fill%3D%22%232a2a35%22%20width%3D%22400%22%20height%3D%22200%22%2F%3E%3Ctext%20fill%3D%22rgba%28255%2C255%2C255%2C0.5%29%22%20font-family%3D%22sans-serif%22%20font-size%3D%2220%22%20dy%3D%2210.5%22%20font-weight%3D%22bold%22%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%3ENo%20Image%20Provided%3C%2Ftext%3E%3C%2Fsvg%3E";
+            const optimizedPoster = imageBase64 ? await resizeImage(imageBase64, 800) : fallBackImage;
+            const optimizedQr = qrImageBase64 ? await resizeImage(qrImageBase64, 400) : "";
 
-        setState(prev => ({ ...prev, events: [...prev.events, newEvent] }));
-        alert("✅ Event Created!");
-        setTitle(""); setDate(""); setCategory(""); setTime(""); setLocation(""); setCoordinator(""); setDescription(""); setImageBase64("");
-        setIsModalOpen(false);
+            const eventData = {
+                title, date, category, time, location, description, 
+                desc: description,
+                headCoordinator: coordinator,
+                coordinators: [{ name: coordinator, role: 'Head Coordinator' }],
+                image: optimizedPoster,
+                roomId: state.user.roomId,
+                attendees: [],
+                registrationOpen: true,
+                fee: fee || "0",
+                qrUrl: optimizedQr,
+                createdAt: new Date()
+            };
+
+            // ☁️ Save to Firestore instead of LocalStorage to avoid 5MB quota crash
+            const docRef = await addDoc(collection(db, "events"), eventData);
+            
+            const newEvent = { ...eventData, id: docRef.id };
+
+            setState(prev => ({ ...prev, events: [...(prev.events || []), newEvent] }));
+            
+            alert("✅ Event Launched Successfully!");
+            setTitle(""); setDate(""); setCategory(""); setTime(""); setLocation(""); setCoordinator(""); setDescription(""); setImageBase64("");
+            setFee("0"); setQrImageBase64("");
+            setIsModalOpen(false);
+        } catch (err) {
+            console.error("🔥 CLOUD UPLOAD ERROR:", err);
+            setError(`Upload Failed: ${err.message.replace("Firebase: ", "")}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleQrChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setQrImageBase64(reader.result);
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleImageChange = (e) => {
@@ -68,14 +126,18 @@ const AdminDashboard = () => {
         }
     };
 
-    const clearRoomData = (type) => {
+    const clearRoomData = async (type) => {
         if (!window.confirm(`Are you sure you want to PERMANENTLY clear all room ${type}?`)) return;
-        setState(prev => {
-            const newState = { ...prev };
-            if (type === 'chats') newState.chats = prev.chats.filter(c => c.roomId !== state.user.roomId);
-            if (type === 'feedbacks') newState.feedbacks = prev.feedbacks.filter(f => f.roomId !== state.user.roomId);
-            return newState;
-        });
+        
+        try {
+            if (type === 'chats') {
+                const toDelete = (state.chats || []).filter(c => c.roomId === state.user.roomId);
+                for (let c of toDelete) await deleteDoc(doc(db, "chats", c.id));
+            } else if (type === 'feedbacks') {
+                const toDelete = (state.feedbacks || []).filter(c => c.roomId === state.user.roomId);
+                for (let c of toDelete) await deleteDoc(doc(db, "feedbacks", c.id));
+            }
+        } catch(e) { console.error("Failed to clear data:", e); }
     };
 
     return (
@@ -174,13 +236,29 @@ const AdminDashboard = () => {
                             <div className="form-group"><label style={{ fontWeight: 700 }}>Description *</label><textarea className="form-control" rows="4" value={description} onChange={e => setDescription(e.target.value)} required /></div>
                             
                             <div className="form-group">
-                                <label style={{ fontWeight: 700 }}>Event Image</label>
+                                <label style={{ fontWeight: 700 }}>Event Poster (Optional)</label>
                                 <input type="file" className="form-control" accept="image/*" onChange={handleImageChange} />
                             </div>
 
-                            <div className="flex gap-4 mt-6">
-                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Event</button>
-                                <button type="button" className="btn btn-outline" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                            <div className="form-group border-bottom pb-4 mb-4">
+                                <label style={{ fontWeight: 700, color: 'var(--primary)' }}>Payment Settings</label>
+                                <div className="grid grid-2 gap-4 mt-2">
+                                    <div className="form-group">
+                                        <label>Event Fee (₹)</label>
+                                        <input type="number" className="form-control" placeholder="0 for free" value={fee} onChange={e => setFee(e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Payment QR Code</label>
+                                        <input type="file" className="form-control" accept="image/*" onChange={handleQrChange} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 mt-8">
+                                <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={loading}>
+                                    {loading ? "☁️ Uploading Event..." : "🚀 Launch Event"}
+                                </button>
+                                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setIsModalOpen(false)}>Cancel</button>
                             </div>
                         </form>
                     </div>

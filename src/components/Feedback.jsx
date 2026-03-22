@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase';
+import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 const Feedback = () => {
     const { state, setState } = useAppState();
@@ -9,13 +11,12 @@ const Feedback = () => {
         .filter(f => f.roomId === state.user.roomId)
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const text = content.trim();
         if (!text) return alert("Feedback cannot be empty");
 
         const newFeedback = {
-            id: Date.now(),
             roomId: state.user.roomId,
             author: state.user.name,
             role: state.user.role,
@@ -23,11 +24,10 @@ const Feedback = () => {
             date: new Date().toISOString()
         };
 
-        setState(prev => ({
-            ...prev,
-            feedbacks: [newFeedback, ...(prev.feedbacks || [])]
-        }));
-        setContent('');
+        try {
+            await addDoc(collection(db, "feedbacks"), newFeedback);
+            setContent('');
+        } catch(e) { console.error("Feedback failed:", e); }
     };
 
     return (
@@ -66,9 +66,9 @@ const Feedback = () => {
                                             <div className="flex items-center gap-2">
                                                 <small className="text-secondary">{new Date(f.date).toLocaleDateString()}</small>
                                                 {state.user.role === 'admin' && (
-                                                    <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem' }} onClick={() => {
+                                                    <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem' }} onClick={async () => {
                                                         if(window.confirm('Delete this feedback?')) {
-                                                            setState(prev => ({ ...prev, feedbacks: prev.feedbacks.filter(item => item.id !== f.id) }));
+                                                            try { await deleteDoc(doc(db, "feedbacks", f.id)); } catch(e) {}
                                                         }
                                                     }}>Delete</button>
                                                 )}

@@ -13,6 +13,40 @@ const Header = () => {
     const toggleProfile = (e) => { e.stopPropagation(); setIsProfileOpen(!isProfileOpen); setIsNavOpen(false); };
     const closeAll = () => { setIsNavOpen(false); setIsProfileOpen(false); };
 
+    const [viewedCounts, setViewedCounts] = useState({ announcements: 0, polls: 0 });
+    const roomAnnouncementsCount = (state.announcements || []).filter(a => a.roomId === state.user?.roomId).length;
+    const roomPollsCount = (state.polls || []).filter(p => p.roomId === state.user?.roomId).length;
+    const newAnnouncements = Math.max(0, roomAnnouncementsCount - viewedCounts.announcements);
+    const newPolls = Math.max(0, roomPollsCount - viewedCounts.polls);
+
+    useEffect(() => {
+        if (!state.user) return;
+        const stored = localStorage.getItem(`viewedData_${state.user.id}`);
+        if (stored) {
+            try { setViewedCounts(JSON.parse(stored)); } catch (e) { }
+        }
+    }, [state.user]);
+
+    useEffect(() => {
+        if (!state.user) return;
+        let changed = false;
+        let newCounts = { ...viewedCounts };
+        
+        if (location.pathname === '/announcements' && viewedCounts.announcements !== roomAnnouncementsCount) {
+            newCounts.announcements = roomAnnouncementsCount;
+            changed = true;
+        }
+        if (location.pathname === '/polls' && viewedCounts.polls !== roomPollsCount) {
+            newCounts.polls = roomPollsCount;
+            changed = true;
+        }
+        
+        if (changed) {
+            setViewedCounts(newCounts);
+            localStorage.setItem(`viewedData_${state.user.id}`, JSON.stringify(newCounts));
+        }
+    }, [location.pathname, roomAnnouncementsCount, roomPollsCount, state.user, viewedCounts]);
+
     useEffect(() => {
         const handleClickOutside = () => closeAll();
         window.addEventListener('click', handleClickOutside);
@@ -25,10 +59,7 @@ const Header = () => {
         { path: '/polls', icon: '📊', text: 'Polls', isPublic: false },
         { path: '/groups', icon: '👥', text: 'Groups', isPublic: false },
         { path: '/chat', icon: '💬', text: 'Discussion', isPublic: false },
-        { path: '/feedback', icon: '📝', text: 'Feedback', isPublic: false },
         { path: '/reports', icon: '📈', text: 'Reports', isPublic: false, isAdminOnly: true },
-        { path: '/about', icon: 'ℹ️', text: 'About', isPublic: true },
-        { path: '/contact', icon: '📞', text: 'Contact', isPublic: true },
     ];
 
     // Filter nav items based on user role and existence
@@ -52,12 +83,39 @@ const Header = () => {
                     {isNavOpen && (
                         <div id="nav-options" className="glass-panel" style={{ display: 'block', position: 'fixed', top: '80px', left: '20px', minWidth: '250px', zIndex: 10000, padding: '1.5rem', border: '2px solid var(--text-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
                             <div className="nav-links-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {filteredNavItems.map(item => (
-                                    <Link key={item.path} to={item.path} className={`nav-link ${isActive(item) ? 'active' : ''}`} style={{ width: '100%' }} onClick={closeAll}>
-                                        <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{item.icon}</span>
-                                        {item.text}
-                                    </Link>
-                                ))}
+                                {filteredNavItems.map(item => {
+                                    if (item.path.startsWith('/#')) {
+                                        return (
+                                            <a key={item.path} href={item.path} className="nav-link" style={{ width: '100%' }} onClick={(e) => {
+                                                if (location.pathname === '/') {
+                                                    e.preventDefault();
+                                                    const target = document.getElementById(item.path.substring(2));
+                                                    if (target) target.scrollIntoView({ behavior: 'smooth' });
+                                                }
+                                                closeAll();
+                                            }}>
+                                                <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{item.icon}</span>
+                                                {item.text}
+                                            </a>
+                                        );
+                                    }
+                                    return (
+                                        <Link key={item.path} to={item.path} className={`nav-link ${isActive(item) ? 'active' : ''}`} style={{ width: '100%', display: 'flex', alignItems: 'center' }} onClick={closeAll}>
+                                            <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{item.icon}</span>
+                                            <span style={{ flex: 1 }}>{item.text}</span>
+                                            {item.path === '/announcements' && newAnnouncements > 0 && (
+                                                <span className="badge" style={{ background: 'var(--danger)', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
+                                                    {newAnnouncements} New
+                                                </span>
+                                            )}
+                                            {item.path === '/polls' && newPolls > 0 && (
+                                                <span className="badge" style={{ background: 'var(--danger)', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
+                                                    {newPolls} New
+                                                </span>
+                                            )}
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

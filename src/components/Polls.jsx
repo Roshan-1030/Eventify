@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase';
+import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const Polls = () => {
     const { state, setState } = useAppState();
@@ -17,7 +19,7 @@ const Polls = () => {
         setOptions(newOpts);
     };
 
-    const handleSavePoll = (e) => {
+    const handleSavePoll = async (e) => {
         e.preventDefault();
         setError('');
         const filteredOpts = options.filter(opt => opt.trim());
@@ -27,37 +29,42 @@ const Polls = () => {
         }
 
         const newPoll = {
-            id: Date.now(),
             roomId: state.user.roomId,
             question,
             options: filteredOpts.map((text, idx) => ({ id: idx + 1, text, votes: 0 })),
-            votedBy: []
+            votedBy: [],
+            createdAt: Date.now()
         };
 
-        setState(prev => ({ ...prev, polls: [...(prev.polls || []), newPoll] }));
-        setQuestion(''); setOptions(['', '']); setIsModalOpen(false);
+        try {
+            await addDoc(collection(db, "polls"), newPoll);
+            setQuestion(''); setOptions(['', '']); setIsModalOpen(false);
+        } catch(e) { console.error("Poll creation failed:", e); }
     };
 
-    const handleVote = (pollId, optionId) => {
+    const handleVote = async (pollId, optionId) => {
         const poll = state.polls.find(p => p.id === pollId);
         if (!poll || poll.votedBy.includes(state.user.id)) return;
         if (!window.confirm("Are you sure? Your vote cannot be changed after submission.")) return;
 
-        const pollsCopy = [...state.polls];
-        const pIdx = pollsCopy.findIndex(p => p.id === pollId);
-        const p = { ...pollsCopy[pIdx], options: [...pollsCopy[pIdx].options], votedBy: [...pollsCopy[pIdx].votedBy] };
-        
-        const oIdx = p.options.findIndex(o => o.id === optionId);
-        p.options[oIdx] = { ...p.options[oIdx], votes: p.options[oIdx].votes + 1 };
-        p.votedBy.push(state.user.id);
-        
-        pollsCopy[pIdx] = p;
-        setState(prev => ({ ...prev, polls: pollsCopy }));
+        const updatedOptions = [...poll.options];
+        const oIdx = updatedOptions.findIndex(o => o.id === optionId);
+        updatedOptions[oIdx] = { ...updatedOptions[oIdx], votes: updatedOptions[oIdx].votes + 1 };
+        const updatedVotedBy = [...(poll.votedBy || []), state.user.id];
+
+        try {
+            await updateDoc(doc(db, "polls", pollId), {
+                options: updatedOptions,
+                votedBy: updatedVotedBy
+            });
+        } catch(e) { console.error("Voting failed:", e); }
     };
 
-    const handleDeletePoll = (id) => {
+    const handleDeletePoll = async (id) => {
         if (!window.confirm("Are you sure you want to delete this poll?")) return;
-        setState(prev => ({ ...prev, polls: prev.polls.filter(p => p.id !== id) }));
+        try {
+            await deleteDoc(doc(db, "polls", id));
+        } catch(e) { console.error("Deleting failed:", e); }
     };
 
     return (
@@ -117,7 +124,12 @@ const Polls = () => {
                         
                         return (
                             <div key={p.id} className="glass-panel poll-card" style={{ padding: '1.5rem', width: '100%', maxWidth: '450px', margin: '0 auto 2rem', border: `2px solid ${userVoted ? 'var(--success)' : 'var(--primary)'}` }}>
-                                <h3 style={{ margin: '0 0 0.5rem 0' }}>{p.question}</h3>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <h3 style={{ margin: 0 }}>{p.question}</h3>
+                                    {Date.now() - (p.createdAt || p.id) < 86400000 && (
+                                        <span className="badge badge-success" style={{ animation: 'pulse 2s infinite', fontSize: '0.7rem' }}>✨ New!</span>
+                                    )}
+                                </div>
                                 <p style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '1.5rem', color: userVoted ? 'var(--success)' : 'var(--danger)' }}>
                                     {userVoted ? '✓ Your response has been recorded.' : '⚠️ Choice is permanent.'}
                                 </p>

@@ -75,9 +75,11 @@ const Login = () => {
                 return;
             }
 
+            const normalizedRoomId = roomId.trim().toUpperCase();
+
             try {
                 // 🔍 Verify Room Exists
-                const adminQuery = query(collection(db, "profiles"), where("room_id", "==", roomId), where("role", "==", "admin"));
+                const adminQuery = query(collection(db, "profiles"), where("room_id", "==", normalizedRoomId), where("role", "==", "admin"));
                 const adminSnap = await getDocs(adminQuery);
                 
                 if (adminSnap.empty) {
@@ -90,7 +92,7 @@ const Login = () => {
                 const studentQuery = query(
                     collection(db, "profiles"), 
                     where("email", "==", studentEmail), 
-                    where("room_id", "==", roomId),
+                    where("room_id", "==", normalizedRoomId),
                     where("role", "==", "student")
                 );
                 const studentSnap = await getDocs(studentQuery);
@@ -113,7 +115,7 @@ const Login = () => {
                         name: studentName,
                         email: studentEmail,
                         role: "student",
-                        room_id: roomId,
+                        room_id: normalizedRoomId,
                         branch: studentBranch,
                         year: studentYear,
                         createdAt: new Date()

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const STATE_KEY = 'eventify_state_react_v1';
+import { db } from '../firebase/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 const initialState = {
     user: null,
@@ -25,6 +27,7 @@ const initialState = {
     chats: [],
     polls: [],
     groups: [],
+    payments: [],
     contactInfo: {
         email: 'support@eventify.edu',
         phone: '+91 98765 43210',
@@ -38,25 +41,64 @@ const StateContext = createContext();
 
 export const StateProvider = ({ children }) => {
     const [state, setState] = useState(() => {
-        const saved = localStorage.getItem(STATE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                // Simple migration / validation
-                if (!parsed.announcements) parsed.announcements = [];
-                if (!parsed.chats) parsed.chats = [];
-                if (!parsed.polls) parsed.polls = [];
-                if (!parsed.groups) parsed.groups = [];
-                return parsed;
-            } catch (e) {
-                console.error("Failed to parse state", e);
-            }
+        try {
+            const saved = localStorage.getItem(STATE_KEY);
+            if (!saved) return initialState;
+
+            const parsed = JSON.parse(saved);
+            
+            // 🔥 Robust Deep Merge of Initial State (Fixes crashes when adding new fields)
+            const merged = { ...initialState, ...parsed };
+
+            // Ensure specific arrays remain arrays
+            ['announcements', 'chats', 'polls', 'groups', 'payments', 'feedbacks', 'events', 'users'].forEach(key => {
+                if (!Array.isArray(merged[key])) merged[key] = initialState[key];
+            });
+
+            return merged;
+        } catch (e) {
+            console.error("🔥 State corruption detected, resetting to defaults:", e);
+            localStorage.removeItem(STATE_KEY);
+            return initialState;
         }
-        return initialState;
     });
 
     useEffect(() => {
-        localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        const unsubscribes = [];
+
+        const subscribe = (colName, key) => {
+            const unsub = onSnapshot(collection(db, colName), (snapshot) => {
+                const items = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { 
+                        ...data, 
+                        id: doc.id, 
+                        _id: data.id || doc.id,
+                        roomId: data.roomId || data.room_id // normalization
+                    };
+                });
+                setState(prev => ({ ...prev, [key]: items }));
+            }, err => console.error(`Sync error on ${colName}:`, err));
+            unsubscribes.push(unsub);
+        };
+
+        subscribe("events", "events");
+        subscribe("announcements", "announcements");
+        subscribe("polls", "polls");
+        subscribe("chats", "chats");
+        subscribe("feedbacks", "feedbacks");
+        subscribe("groups", "groups");
+        subscribe("profiles", "users");
+
+        return () => unsubscribes.forEach(fn => fn());
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        } catch (e) {
+            console.warn("Storage quota exceeded. Using in-memory state only.");
+        }
     }, [state]);
 
     const login = (user) => setState(prev => ({ ...prev, user }));

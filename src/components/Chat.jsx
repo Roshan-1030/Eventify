@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 const Chat = () => {
     const { state, setState } = useAppState();
     const [msg, setMsg] = useState('');
     const chatRef = useRef(null);
 
-    const roomChats = (state.chats || []).filter(c => c.roomId === state.user.roomId);
+    const roomChats = (state.chats || [])
+        .filter(c => c.roomId === state.user.roomId)
+        .sort((a,b) => (a.timestamp || a.id || 0) - (b.timestamp || b.id || 0));
     const isGlobalMuted = (state.mutedRooms || []).includes(state.user.roomId);
     const isAdmin = state.user.role === 'admin';
 
@@ -16,22 +20,24 @@ const Chat = () => {
         }
     }, [roomChats]);
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
         e.preventDefault();
         if (!msg.trim()) return;
         if (isGlobalMuted && !isAdmin) return;
 
         const newMsg = {
-            id: Date.now(),
             roomId: state.user.roomId,
             userId: state.user.id,
             userName: state.user.name,
             text: msg,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: Date.now()
         };
 
-        setState(prev => ({ ...prev, chats: [...(prev.chats || []), newMsg] }));
-        setMsg('');
+        try {
+            await addDoc(collection(db, "chats"), newMsg);
+            setMsg('');
+        } catch(e) { console.error("Failed to send chat:", e); }
     };
 
     const toggleGlobalMute = () => {

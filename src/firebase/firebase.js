@@ -12,8 +12,8 @@ const firebaseConfig = {
   projectId: "eventify-8d932",
   storageBucket: "eventify-8d932.firebasestorage.app",
   messagingSenderId: "1077344597669",
-  appId: "1:1077344597669:web:44723acd948b03b55dff4c",
-  databaseURL: "https://eventify-8d932-default-rtdb.firebaseio.com",
+  appId: "1:1077344597669:web:44723acd948b03b55dff4c"
+ 
 };
 
 // 🚀 Initialize Firebase
