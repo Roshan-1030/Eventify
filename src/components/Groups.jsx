@@ -64,6 +64,29 @@ const Groups = () => {
         } catch(e) { console.error(e); }
     };
 
+    const handleRequestJoin = async () => {
+        if (!currentGroup) return;
+        try {
+            const newRequests = [...(currentGroup.requests || []), { id: state.user.id, name: state.user.name, email: state.user.email }];
+            await updateDoc(doc(db, "groups", currentGroup.id), { requests: newRequests });
+            alert("Join request sent successfully!");
+        } catch(e) { console.error("Failed to request join:", e); }
+    };
+
+    const handleRequestAction = async (reqUser, action) => {
+        if (!currentGroup) return;
+        const filteredRequests = (currentGroup.requests || []).filter(r => r.id !== reqUser.id);
+        const payload = { requests: filteredRequests };
+        
+        if (action === 'accept') {
+            payload.members = [...(currentGroup.members || []), { ...reqUser, roleInGroup: 'student' }];
+        }
+        
+        try {
+            await updateDoc(doc(db, "groups", currentGroup.id), payload);
+        } catch(e) { console.log("Action failed", e); }
+    };
+
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!chatInput.trim() || !currentGroup) return;
@@ -90,11 +113,24 @@ const Groups = () => {
         const isMember = !!memberSelf || isGlobalAdmin;
 
         if (!isMember) {
+            const hasRequested = (currentGroup.requests || []).some(r => r.id === state.user.id);
             return (
-                <div className="text-center p-12 glass-panel">
-                    <h1>Private Group</h1>
+                <div className="text-center p-12 glass-panel" style={{ maxWidth: '500px', margin: '2rem auto' }}>
+                    <h1 style={{ color: 'var(--danger)' }}>Private Group</h1>
                     <p>Access restricted to <strong>{currentGroup.name}</strong> members.</p>
-                    <button className="btn btn-primary mt-4" onClick={() => navigate('/groups')}>Back</button>
+                    
+                    {hasRequested ? (
+                        <div className="p-3 bg-main rounded-lg border mt-4">
+                            <span className="badge badge-success" style={{ fontSize: '0.9rem' }}>⏳ Request Pending</span>
+                            <p className="mt-2 text-sm mb-0">Your join request has been sent to the group admins.</p>
+                        </div>
+                    ) : (
+                        <button className="btn btn-primary mt-6 w-100" style={{ padding: '0.8rem', fontSize: '1rem', fontWeight: 700 }} onClick={handleRequestJoin}>
+                            🙋‍♂️ Request to Join
+                        </button>
+                    )}
+                    
+                    <button className="btn btn-outline mt-3 w-100" onClick={() => navigate('/groups')}>← Back to Communities</button>
                 </div>
             );
         }
@@ -166,6 +202,26 @@ const Groups = () => {
                                 ))}
                             </div>
                         </div>
+
+                        {isGroupAdmin && (currentGroup.requests || []).length > 0 && (
+                            <div className="glass-panel text-left">
+                                <h3 style={{ color: 'var(--primary)' }}>Pending Requests ({currentGroup.requests.length})</h3>
+                                <div className="mt-4 flex flex-col gap-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                    {currentGroup.requests.map(req => (
+                                        <div key={req.id} className="flex items-center justify-between pb-3 border-bottom">
+                                            <div>
+                                                <strong style={{ display: 'block' }}>{req.name}</strong>
+                                                <small className="text-secondary">{req.email}</small>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button className="btn btn-xs btn-success text-white px-2 py-1" style={{ fontSize: '0.75rem' }} onClick={() => handleRequestAction(req, 'accept')}>✓ Accept</button>
+                                                <button className="btn btn-xs btn-outline text-danger px-2 py-1" style={{ fontSize: '0.75rem' }} onClick={() => handleRequestAction(req, 'reject')}>✕</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 
 const Chat = () => {
     const { state, setState } = useAppState();
@@ -11,7 +11,10 @@ const Chat = () => {
     const roomChats = (state.chats || [])
         .filter(c => c.roomId === state.user.roomId)
         .sort((a,b) => (a.timestamp || a.id || 0) - (b.timestamp || b.id || 0));
-    const isGlobalMuted = (state.mutedRooms || []).includes(state.user.roomId);
+    
+    // Cloud-synced global mute state based on Admin's profile settings
+    const roomAdminProfile = (state.users || []).find(u => u.role === 'admin' && u.roomId === state.user.roomId);
+    const isGlobalMuted = roomAdminProfile ? roomAdminProfile.isMuted === true : false;
     const isAdmin = state.user.role === 'admin';
 
     useEffect(() => {
@@ -40,12 +43,13 @@ const Chat = () => {
         } catch(e) { console.error("Failed to send chat:", e); }
     };
 
-    const toggleGlobalMute = () => {
-        if (!isAdmin) return;
-        setState(prev => {
-            const muted = [...(prev.mutedRooms || [])];
-            return { ...prev, mutedRooms: muted.includes(state.user.roomId) ? muted.filter(id => id !== state.user.roomId) : [...muted, state.user.roomId] };
-        });
+    const toggleGlobalMute = async () => {
+        if (!isAdmin || !roomAdminProfile) return;
+        try {
+            await updateDoc(doc(db, "profiles", roomAdminProfile.id), {
+                isMuted: !isGlobalMuted
+            });
+        } catch(e) { console.log("Failed to toggle mute:", e); }
     };
 
     return (

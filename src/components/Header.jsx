@@ -76,8 +76,8 @@ const Header = () => {
 
     return (
         <header className="glass-panel" style={{ borderRadius: 0, width: '100%', position: 'sticky', top: 0, zIndex: 100, padding: '1rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', position: 'relative' }}>
+            <div className="app-header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+                <div className="header-left-actions" style={{ flex: 1, display: 'flex', alignItems: 'center', position: 'relative' }}>
                     <button className="btn" onClick={toggleNav} style={{ background: 'transparent', border: 'none', fontSize: '2rem', color: 'var(--text-primary)', cursor: 'pointer', padding: 0 }}>☰</button>
                     
                     {isNavOpen && (
@@ -121,17 +121,17 @@ const Header = () => {
                     )}
                 </div>
                 
-                <Link to="/" style={{ textDecoration: 'none', textAlign: 'center', flex: 1 }}>
+                <Link to="/" className="logo-wrapper" style={{ textDecoration: 'none', textAlign: 'center', flex: 1 }}>
                     <h1 className="logo mb-0" style={{ fontSize: '2.5rem', margin: 0 }}>
                         Eventify
                     </h1>
                 </Link>
                 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flex: 1, position: 'relative' }}>
+                <div className="header-right-actions" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flex: 1, position: 'relative' }}>
                     {state.user ? (
                         <>
                             <div className="user-profile-sm" style={{ margin: 0, padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={toggleProfile}>
-                                <div className="hide-on-mobile" style={{ marginRight: '0.5rem', textAlign: 'right' }}>
+                                <div className="hide-on-mobile" style={{ marginRight: '0.5rem', textAlign: 'right', display: window.innerWidth < 768 ? 'none' : 'block' }}>
                                     <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>{state.user.name}</div>
                                     <span className={`badge badge-${state.user.role}`} style={{ fontSize: '0.65rem' }}>{state.user.role}</span>
                                 </div>

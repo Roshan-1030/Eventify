@@ -459,6 +459,24 @@ header.glass-panel { border-radius: 0; }
     .nav-link:hover, .nav-link.active {
         transform: none !important;
     }
+
+    .app-header-container {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .app-header-container .logo-wrapper {
+        flex: 2 !important;
+    }
+
+    .app-header-container .header-right-actions {
+        flex: 1 !important;
+        justify-content: flex-end !important;
+    }
+    
+    .app-header-container .header-left-actions {
+        flex: 1 !important;
+    }
 }
 
 /* Nav Menu Overrides for Scrolling/Accessibility */

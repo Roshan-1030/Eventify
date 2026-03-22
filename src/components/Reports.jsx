@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 const Reports = () => {
     const { state, setState } = useAppState();
@@ -24,20 +26,35 @@ const Reports = () => {
         return { ...s, registeredEvents };
     });
 
-    const totalRoomRegistrations = roomEvents.reduce((sum, e) => sum + (e.attendees || []).length, 0);
+    // Calculate and de-duplicate all room registrations for total counter
+    const registrationSet = new Set();
+    roomEvents.forEach(e => {
+        (e.attendees || []).forEach(a => {
+            registrationSet.add(`${e.id}_${a.id || a.email}`);
+        });
+    });
+    const totalRoomRegistrations = registrationSet.size;
 
-    const handleRemoveStudent = (studentId) => {
+    const handleRemoveStudent = async (studentId) => {
         if (!window.confirm('Are you sure you want to remove this student from the room? Their event registrations will also be completely cleared.')) return;
         
-        const newUsers = state.users.filter(u => u.id !== studentId);
-        const newEvents = state.events.map(ev => {
-            if (ev.roomId === state.user.roomId) {
-                return { ...ev, attendees: (ev.attendees || []).filter(a => String(a.id) !== String(studentId)) };
+        try {
+            // Delete their cloud auth/profile record
+            await deleteDoc(doc(db, "profiles", studentId));
+            
+            // Clean up their array references inside events
+            for (let ev of roomEvents) {
+                const remainingAttendees = (ev.attendees || []).filter(a => String(a.id) !== String(studentId));
+                if (remainingAttendees.length !== (ev.attendees || []).length) {
+                    await updateDoc(doc(db, "events", String(ev.id)), { attendees: remainingAttendees });
+                }
             }
-            return ev;
-        });
-
-        setState(prev => ({ ...prev, users: newUsers, events: newEvents }));
+            
+            alert("Student and all associated records have been successfully purged from the room!");
+        } catch(e) {
+            console.error("Failed to remove student:", e);
+            alert("Error trying to remove student from server. Check permissions.");
+        }
     };
 
     const handleExportCSV = () => {
@@ -82,7 +99,7 @@ const Reports = () => {
                 <tbody>
                     ${studentReport.map(s => `
                         <tr>
-                            <td style="padding: 1rem; border: 1px solid #e2e8f0; font-weight: bold;">${s.name}</td>
+                            <td style="padding: 1rem; border: 1px solid #e2e8f0; font-weight: bold;">${s.name}<br><small style="font-weight: normal; color: #64748b;">${s.email}</small></td>
                             <td style="padding: 1rem; border: 1px solid #e2e8f0;">${s.branch} - ${s.year} Year</td>
                             <td style="padding: 1rem; border: 1px solid #e2e8f0;">${s.registeredEvents.map(e => e.title).join(', ') || 'None'}</td>
                         </tr>
@@ -91,7 +108,14 @@ const Reports = () => {
             </table>
         `;
         
-        const opt = { margin: 0.5, filename: `Report_${state.user.roomId}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+        const opt = { 
+            margin: 0.5, 
+            filename: `Report_${state.user.roomId}.pdf`, 
+            image: { type: 'jpeg', quality: 0.98 }, 
+            html2canvas: { scale: 2 }, 
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
+            pagebreak: { mode: ['css', 'legacy'], avoid: 'tr' }
+        };
         window.html2pdf().set(opt).from(printContainer).save();
     };
 
@@ -115,7 +139,7 @@ const Reports = () => {
                 </div>
                 <div className="glass-panel text-center" style={{ border: '2px solid var(--primary)' }}>
                     <h3 style={{ fontSize: '2.5rem', color: 'var(--primary)', margin: 0 }}>{totalRoomRegistrations}</h3>
-                    <p style={{ fontWeight: 'bold' }}>Total Registrations</p>
+                    <p style={{ fontWeight: 'bold' }}>Total Event Seats Taken</p>
                 </div>
                 <div className="glass-panel text-center" style={{ border: '2px solid var(--success)' }}>
                     <h3 style={{ fontSize: '2.5rem', color: 'var(--success)', margin: 0 }}>{roomEvents.length}</h3>

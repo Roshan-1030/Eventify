@@ -14,7 +14,16 @@ const AdminDashboard = () => {
     
     // Stats calc
     const roomEvents = (state.events || []).filter(e => e.roomId === state.user.roomId);
-    const totalRegistrations = roomEvents.reduce((sum, e) => sum + (e.attendees || []).length, 0);
+    
+    // Calculate total unique registrations across all events in this room
+    const registrationSet = new Set();
+    roomEvents.forEach(e => {
+        (e.attendees || []).forEach(a => {
+            // Combine event ID and student ID/email to create a unique registration key
+            registrationSet.add(`${e.id}_${a.id || a.email}`);
+        });
+    });
+    const totalRegistrations = registrationSet.size;
     const roomStudentsCount = (state.users || []).filter(u => u.role === 'student' && u.roomId === state.user.roomId).length;
     const roomFeedbacksCount = (state.feedbacks || []).filter(fb => fb.roomId === state.user.roomId).length;
     const roomChatsCount = (state.chats || []).filter(c => c.roomId === state.user.roomId).length;
@@ -90,11 +99,7 @@ const AdminDashboard = () => {
             };
 
             // ☁️ Save to Firestore instead of LocalStorage to avoid 5MB quota crash
-            const docRef = await addDoc(collection(db, "events"), eventData);
-            
-            const newEvent = { ...eventData, id: docRef.id };
-
-            setState(prev => ({ ...prev, events: [...(prev.events || []), newEvent] }));
+            await addDoc(collection(db, "events"), eventData);
             
             alert("✅ Event Launched Successfully!");
             setTitle(""); setDate(""); setCategory(""); setTime(""); setLocation(""); setCoordinator(""); setDescription(""); setImageBase64("");
@@ -140,12 +145,36 @@ const AdminDashboard = () => {
         } catch(e) { console.error("Failed to clear data:", e); }
     };
 
+    const handleShareRoom = () => {
+        const shareData = {
+            title: 'Join my Eventify Room!',
+            text: `Join my event management room on Eventify! Room ID: ${state.user.roomId}`,
+            url: window.location.origin + '/login'
+        };
+
+        if (navigator.share) {
+            navigator.share(shareData).catch(err => console.log('Error sharing', err));
+        } else {
+            navigator.clipboard.writeText(`Eventify Room ID: ${state.user.roomId} | Join here: ${shareData.url}`);
+            alert('Room details copied to clipboard!');
+        }
+    };
+
     return (
         <div className="admin-dashboard">
             <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
                 <div>
                     <h1>Command Center</h1>
-                    <p>Managing Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+                    <div className="flex items-center gap-2">
+                        <p style={{ margin: 0 }}>Managing Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+                        <button 
+                            className="btn btn-sm btn-outline" 
+                            style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem', borderRadius: '8px' }}
+                            onClick={handleShareRoom}
+                        >
+                            🔗 Share Room
+                        </button>
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <button className="btn btn-outline" onClick={() => navigate('/reports')}>📄 Full Report</button>
@@ -159,8 +188,8 @@ const AdminDashboard = () => {
                     <p style={{ fontWeight: 800 }}>Events</p>
                 </div>
                 <div className="glass-panel text-center" style={{ padding: '2rem' }}>
-                    <h2 style={{ color: 'var(--success)', fontSize: '2.5rem', margin: 0 }}>{totalRegistrations}</h2>
-                    <p style={{ fontWeight: 800 }}>Registrations</p>
+                    <h3 style={{ fontSize: '2rem', margin: 0 }}>{totalRegistrations}</h3>
+                    <p style={{ margin: 0, opacity: 0.8 }}>Total Seats Taken</p>
                 </div>
                 <div className="glass-panel text-center" style={{ padding: '2rem' }}>
                     <h2 style={{ color: 'var(--accent)', fontSize: '2.5rem', margin: 0 }}>{roomStudentsCount}</h2>

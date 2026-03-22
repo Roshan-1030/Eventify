@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
 import { doc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+import { useEffect } from 'react';
 
 const EventCard = ({ event }) => {
     const { state, setState } = useAppState();
@@ -10,6 +12,7 @@ const EventCard = ({ event }) => {
     const [showAttendees, setShowAttendees] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showPayments, setShowPayments] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
     const [selectedScreenshot, setSelectedScreenshot] = useState(null);
 
     // Edit Form State
@@ -18,6 +21,39 @@ const EventCard = ({ event }) => {
     const isRegistered = (event.attendees || []).some(a => String(a.id) === String(state.user.id));
     const isAdmin = state.user.role === 'admin';
     const eventPayments = (state.payments || []).filter(p => String(p.eventId) === String(event.id));
+    const scannedPayments = eventPayments.filter(p => p.scanned);
+    
+    // De-duplicate attendees just in case multiple legacy versions of their ID string existed
+    const uniqueAttendees = Array.from(new Map((event.attendees || []).map(a => [String(a.id || a.email), a])).values());
+
+    useEffect(() => {
+        let scanner = null;
+        if (showScanner) {
+            scanner = new Html5QrcodeScanner(`qr-reader-${event.id}`, { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+            scanner.render(async (decodedText) => {
+                scanner.pause();
+                await handleScanTicket(decodedText);
+                setTimeout(() => scanner.resume(), 2000);
+            }, () => {});
+        }
+        return () => { if (scanner) scanner.clear().catch(e => {}); }
+    }, [showScanner]);
+
+    const handleScanTicket = async (ticketId) => {
+        const pmt = eventPayments.find(p => String(p.id) === String(ticketId));
+        if (!pmt) {
+            alert("❌ Invalid Ticket: Not found for this event.");
+            return;
+        }
+        if (pmt.scanned) {
+            alert(`⚠️ ALREADY ADMITTED: ${pmt.userName} has already been scanned!`);
+            return;
+        }
+        try {
+            await updateDoc(doc(db, "payments", pmt.id), { scanned: true, scannedAt: new Date().toISOString() });
+            alert(`✅ SUCCESS! ${pmt.userName} is admitted to ${event.title}.`);
+        } catch(e) { console.error(e); }
+    };
 
     const handleToggleRegistration = async () => {
         if (!isAdmin) return;
@@ -45,13 +81,16 @@ const EventCard = ({ event }) => {
     };
 
     const handleUpdatePaymentStatus = async (paymentId, newStatus) => {
-        // Payments are not synced to firebase events yet? Wait, payments are a separate collection?
-        // Wait, event payments are currently stored purely in localstorage state.payments?
-        // Let's modify payments local state for now because user hasn't asked to sync payments to firebase.
-        const paymentsCopy = (state.payments || []).map(p => 
-            p.id === paymentId ? { ...p, status: newStatus } : p
-        );
-        setState(prev => ({ ...prev, payments: paymentsCopy }));
+        try {
+            await updateDoc(doc(db, "payments", paymentId), { status: newStatus });
+        } catch(e) { console.error("Error updating payment status", e); }
+    };
+
+    const handleIssueTicket = async (paymentId) => {
+        try {
+            await updateDoc(doc(db, "payments", paymentId), { ticketIssued: true, status: 'verified' });
+            alert("E-Ticket Officially Issued to the student!");
+        } catch(e) { console.error("Error issuing ticket", e); }
     };
 
     const handleDeleteEvent = async () => {
@@ -167,8 +206,9 @@ const EventCard = ({ event }) => {
                 {isAdmin && (
                     <div className="event-admin-controls">
                         <button className="btn btn-sm btn-outline admin-btn" onClick={handleToggleRegistration}>{event.registrationOpen ? "Close Reg" : "Open Reg"}</button>
-                        <button className="btn btn-sm btn-outline admin-btn" onClick={() => setShowAttendees(true)}>👥 {event.attendees?.length || 0} RSVPs</button>
+                        <button className="btn btn-sm btn-outline admin-btn" onClick={() => setShowAttendees(true)}>👥 {uniqueAttendees.length} RSVPs</button>
                         <button className="btn btn-sm btn-primary admin-btn" onClick={() => setShowEditModal(true)}>✏️ Edit</button>
+                        <button className="btn btn-sm btn-success admin-btn" onClick={() => setShowScanner(true)}>📷 Scan Tickets</button>
                         <button className="btn btn-sm btn-outline admin-btn" onClick={handleDeleteEvent}>🗑️ Delete</button>
                     </div>
                 )}
@@ -183,8 +223,8 @@ const EventCard = ({ event }) => {
                             <button className="btn" onClick={() => setShowAttendees(false)}>✕</button>
                         </div>
                         <div className="flex flex-col gap-2">
-                            {(!event.attendees || event.attendees.length === 0) ? <p className="text-secondary text-center">No students registered yet.</p> :
-                                event.attendees.map((student, i) => (
+                            {uniqueAttendees.length === 0 ? <p className="text-secondary text-center">No students registered yet.</p> :
+                                uniqueAttendees.map((student, i) => (
                                     <div key={i} className="flex justify-between p-2 border-bottom"><strong>{student.name}</strong><small>{student.email}</small></div>
                                 ))
                             }
@@ -228,15 +268,63 @@ const EventCard = ({ event }) => {
                                                     </div>
                                                 </td>
                                                 <td className="p-2"><span className={`badge badge-${p.status === 'verified' ? 'success' : (p.status === 'rejected' ? 'danger' : 'accent')}`}>{p.status.toUpperCase()}</span></td>
-                                                <td className="p-2 flex gap-1">
-                                                    <button className="btn btn-sm btn-outline btn-xs btn-success" onClick={() => handleUpdatePaymentStatus(p.id, 'verified')}>✓</button>
-                                                    <button className="btn btn-sm btn-outline btn-xs btn-danger" onClick={() => handleUpdatePaymentStatus(p.id, 'rejected')}>✖</button>
+                                                <td className="p-2 flex gap-1 items-center flex-wrap">
+                                                    {!p.ticketIssued && p.status === 'verified' && (
+                                                        <button className="btn btn-sm btn-primary btn-xs" onClick={() => handleIssueTicket(p.id)}>🎟️ Issue Ticket</button>
+                                                    )}
+                                                    {p.ticketIssued && <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>TICKET ISSUED</span>}
+                                                    {!p.ticketIssued && (
+                                                        <>
+                                                            <button className="btn btn-sm btn-outline btn-xs btn-success" onClick={() => handleUpdatePaymentStatus(p.id, 'verified')}>✓</button>
+                                                            <button className="btn btn-sm btn-outline btn-xs btn-danger" onClick={() => handleUpdatePaymentStatus(p.id, 'rejected')}>✖</button>
+                                                        </>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Ticket Scanner Modal */}
+            {showScanner && (
+                <div className="modal-overlay" style={{ display: 'flex' }} onClick={() => setShowScanner(false)}>
+                    <div className="glass-panel" style={{ width: '95%', maxWidth: '800px', padding: '2.5rem', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 style={{ margin: 0 }}>📷 Scanner Station</h2>
+                                <p className="text-secondary" style={{ margin: 0 }}>Admitting attendees for: <strong>{event.title}</strong></p>
+                            </div>
+                            <button className="btn" onClick={() => setShowScanner(false)}>✕</button>
+                        </div>
+                        
+                        <div className="grid grid-2 gap-8">
+                            <div>
+                                <h3 className="mb-4 text-center">Scan E-Ticket QR</h3>
+                                <div id={`qr-reader-${event.id}`} style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }}></div>
+                            </div>
+                            <div>
+                                <h3 className="mb-4">Admitted & Present ({scannedPayments.length})</h3>
+                                <div className="border p-4 rounded-lg bg-main" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                                    {scannedPayments.length === 0 ? <p className="text-secondary italic text-center text-sm py-4">No tickets scanned yet.</p> : (
+                                        <div className="flex flex-col gap-2">
+                                            {scannedPayments.map(p => (
+                                                <div key={p.id} className="flex justify-between items-center bg-white p-2 rounded shadow-sm border">
+                                                    <div>
+                                                        <strong>{p.userName}</strong>
+                                                        <div className="text-secondary text-xs" style={{ fontFamily: 'monospace' }}>#{p.id.slice(0,8).toUpperCase()}</div>
+                                                    </div>
+                                                    <span className="badge badge-success px-2 py-1 text-xs">PRESENT</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

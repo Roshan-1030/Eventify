@@ -89,6 +89,7 @@ export const StateProvider = ({ children }) => {
         subscribe("feedbacks", "feedbacks");
         subscribe("groups", "groups");
         subscribe("profiles", "users");
+        subscribe("payments", "payments");
 
         return () => unsubscribes.forEach(fn => fn());
     }, []);
