@@ -194,9 +194,19 @@ const EventCard = ({ event }) => {
                 <div className="event-actions" style={{ display: 'flex', gap: '1rem' }}>
                     <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => navigate(`/event/${event.id}`)}>Details</button>
                     {!isAdmin && (
-                        <button className={`btn ${isRegistered ? 'btn-outline' : 'btn-success'}`} style={{ flex: 1, cursor: isRegistered ? 'default' : 'pointer' }} onClick={handleRegister} disabled={isRegistered}>
-                            {isRegistered ? "Registered ✅" : "Register Now"}
-                        </button>
+                        <>
+                            {isRegistered ? (
+                                <>
+                                    {eventPayments.find(p => String(p.userId) === String(state.user.id))?.ticketIssued ? (
+                                        <button className="btn btn-success" style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }} onClick={() => navigate(`/ticket/${eventPayments.find(p => String(p.userId) === String(state.user.id)).id}`)}>🎫 Ticket</button>
+                                    ) : (
+                                        <button className="btn btn-outline disabled" style={{ flex: 1 }} disabled>Registered ✅</button>
+                                    )}
+                                </>
+                            ) : (
+                                <button className="btn btn-success" style={{ flex: 1 }} onClick={handleRegister}>Register Now</button>
+                            )}
+                        </>
                     )}
                     {isAdmin && (
                         <button className="btn btn-success" style={{ flex: 1 }} onClick={() => setShowPayments(true)}>💸 Payments ({eventPayments.length})</button>

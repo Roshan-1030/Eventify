@@ -585,6 +585,21 @@ header.glass-panel { border-radius: 0; }
 .md-items-center { align-items: flex-start; }
 .md-w-auto { width: 100%; }
 
+/* --- Ticket Page Responsive Styles --- */
+.ticket-layout { display: flex; flex-direction: row; }
+.ticket-main-section { padding: 3rem; min-height: 400px; }
+.ticket-qr-section { padding: 3rem 2rem; border-left: 3px dashed #F0F0F0; }
+
+@media (max-width: 768px) {
+    .ticket-layout { flex-direction: column !important; }
+    .ticket-main-section { padding: 2rem 1.5rem !important; min-height: auto !important; }
+    .ticket-qr-section { padding: 2.5rem 1.5rem !important; border-left: none !important; border-top: 3px dashed #F0F0F0 !important; }
+    .ticket-meta-grid { grid-template-columns: 1fr !important; gap: 1rem !important; }
+    .ticket-premium-pass h1 { font-size: 2rem !important; }
+    .ticket-page-container { padding: 1.25rem 1rem !important; }
+    .ticket-main-section div:last-child { margin-top: 2rem !important; }
+}
+
 @media (min-width: 768px) {
     .md-items-center { align-items: center; }
     .md-w-auto { width: auto; }

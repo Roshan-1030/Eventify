@@ -4,6 +4,7 @@ import { useAppState } from '../context/StateContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { db } from '../firebase/firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { useState } from 'react';
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -93,23 +94,25 @@ const EventDetails = () => {
                                         </button>
                                     )}
                                     {existingPayment && isRegistered && (
-                                        <div className="p-4 mt-4 rounded-lg text-center" style={{ background: existingPayment.ticketIssued ? 'rgba(0,0,0,0.02)' : 'var(--accent)', border: existingPayment.ticketIssued ? '2px dashed var(--success)' : 'none', color: existingPayment.ticketIssued ? 'inherit' : 'white' }}>
+                                        <div className="p-2 mt-4 text-center">
                                             {existingPayment.ticketIssued ? (
-                                                <div className="flex flex-col items-center">
-                                                    <h3 style={{ color: 'var(--success)', margin: '0 0 1rem 0', fontWeight: 800 }}>🎟️ Official E-Ticket</h3>
-                                                    <div style={{ padding: '0.5rem', background: 'white', borderRadius: '8px', display: 'inline-block' }}>
-                                                        <QRCodeSVG value={existingPayment.id} size={150} level="H" />
+                                                <div className="flex flex-col gap-4 items-center">
+                                                    <div className="p-4 rounded-xl w-100" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '2px solid var(--success)', color: 'var(--success)' }}>
+                                                        <h3 style={{ margin: '0 0 0.5rem 0', fontWeight: 800 }}>✅ Seat Confirmed!</h3>
+                                                        <p className="mb-0 text-sm">Official e-ticket has been issued for <strong>{existingPayment.userName}</strong>.</p>
                                                     </div>
-                                                    <div className="w-100 mt-4 text-left p-3 rounded" style={{ background: 'white', border: '1px solid rgba(0,0,0,0.1)' }}>
-                                                        <div className="flex justify-between mb-1"><span className="text-secondary text-sm">Ticket Holder:</span> <strong>{existingPayment.userName}</strong></div>
-                                                        <div className="flex justify-between mb-1"><span className="text-secondary text-sm">Ticket ID:</span> <span style={{ fontFamily: 'monospace' }}>#{existingPayment.id.slice(0,8).toUpperCase()}</span></div>
-                                                        <div className="flex justify-between mt-3 pt-3 border-top"><span className="text-secondary text-sm">Campus Entry:</span> 
-                                                            {existingPayment.scanned ? <span className="badge badge-success px-2 py-1">✓ Verified Entry</span> : <span className="badge badge-accent px-2 py-1">Pending Scan</span>}
-                                                        </div>
-                                                    </div>
+                                                    
+                                                    <button className="btn btn-primary w-100 btn-lg" 
+                                                            style={{ padding: '1.2rem', gap: '0.75rem', fontSize: '1.2rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}
+                                                            onClick={() => navigate(`/ticket/${existingPayment.id}`)}>
+                                                        🎫 Open Official E-Ticket
+                                                    </button>
                                                 </div>
                                             ) : (
-                                                <div className="font-bold py-2">⏳ Verification in Progress</div>
+                                                <div className="p-6 rounded-xl text-center" style={{ background: 'var(--accent)', color: 'white' }}>
+                                                    <div className="font-bold py-2 mb-2" style={{ fontSize: '1.2rem' }}>⏳ Verification in Progress</div>
+                                                    <p className="mb-0" style={{ fontSize: '0.9rem', opacity: 0.9 }}>Admin is currently reviewing your payment screenshot. You'll get your ticket shortly!</p>
+                                                </div>
                                             )}
                                         </div>
                                     )}

@@ -18,6 +18,7 @@ import Contact from './components/Contact';
 import EventDetails from './components/EventDetails';
 import Profile from './components/Profile';
 import Payment from './components/Payment';
+import TicketPage from './components/TicketPage';
 
 
 const AuthGuard = ({ children }) => {
@@ -101,6 +102,7 @@ const App = () => {
                 <Route path="/event/:id" element={<AuthGuard><Layout><EventDetails /></Layout></AuthGuard>} />
                 <Route path="/payment/:eventId" element={<AuthGuard><Layout><Payment /></Layout></AuthGuard>} />
                 <Route path="/profile" element={<AuthGuard><Layout><Profile /></Layout></AuthGuard>} />
+                <Route path="/ticket/:paymentId" element={<AuthGuard><Layout><TicketPage /></Layout></AuthGuard>} />
 
                 {/* Redirect any legacy hash-links manually if they exist, or just fallback to root */}
                 <Route path="*" element={<Navigate to="/" />} />
