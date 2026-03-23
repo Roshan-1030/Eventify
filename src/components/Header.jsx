@@ -131,7 +131,7 @@ const Header = () => {
                     {state.user ? (
                         <>
                             <div className="user-profile-sm" style={{ margin: 0, padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={toggleProfile}>
-                                <div className="hide-on-mobile" style={{ marginRight: '0.5rem', textAlign: 'right', display: window.innerWidth < 768 ? 'none' : 'block' }}>
+                                <div className="hide-on-mobile" style={{ marginRight: '0.5rem', textAlign: 'right' }}>
                                     <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>{state.user.name}</div>
                                     <span className={`badge badge-${state.user.role}`} style={{ fontSize: '0.65rem' }}>{state.user.role}</span>
                                 </div>

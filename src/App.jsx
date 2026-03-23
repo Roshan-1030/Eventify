@@ -28,7 +28,7 @@ const AuthGuard = ({ children }) => {
 const Layout = ({ children }) => (
     <div className="app-container">
         <Header />
-        <main className="main-content" style={{ padding: '2rem' }}>
+        <main className="main-content">
             {children}
         </main>
     </div>
@@ -51,7 +51,7 @@ const DashboardLayout = () => {
     }, [location]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+        <div className="dashboard-content-wrapper">
             {state.user?.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />}
             <div id="about" style={{ paddingTop: '2rem' }}>
                 <About />

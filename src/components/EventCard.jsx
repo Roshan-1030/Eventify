@@ -204,12 +204,12 @@ const EventCard = ({ event }) => {
                 </div>
 
                 {isAdmin && (
-                    <div className="event-admin-controls">
-                        <button className="btn btn-sm btn-outline admin-btn" onClick={handleToggleRegistration}>{event.registrationOpen ? "Close Reg" : "Open Reg"}</button>
-                        <button className="btn btn-sm btn-outline admin-btn" onClick={() => setShowAttendees(true)}>👥 {uniqueAttendees.length} RSVPs</button>
-                        <button className="btn btn-sm btn-primary admin-btn" onClick={() => setShowEditModal(true)}>✏️ Edit</button>
-                        <button className="btn btn-sm btn-success admin-btn" onClick={() => setShowScanner(true)}>📷 Scan Tickets</button>
-                        <button className="btn btn-sm btn-outline admin-btn" onClick={handleDeleteEvent}>🗑️ Delete</button>
+                    <div className="event-admin-controls" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', marginTop: '1.5rem' }}>
+                        <button className="btn btn-sm btn-outline admin-btn" style={{ minHeight: '40px' }} onClick={handleToggleRegistration}>{event.registrationOpen ? "Close Reg" : "Open Reg"}</button>
+                        <button className="btn btn-sm btn-outline admin-btn" style={{ minHeight: '40px' }} onClick={() => setShowAttendees(true)}>👥 {uniqueAttendees.length} RSVPs</button>
+                        <button className="btn btn-sm btn-primary admin-btn" style={{ minHeight: '40px' }} onClick={() => setShowEditModal(true)}>✏️ Edit</button>
+                        <button className="btn btn-sm btn-success admin-btn" style={{ minHeight: '40px' }} onClick={() => setShowScanner(true)}>📷 Scan Tickets</button>
+                        <button className="btn btn-sm btn-outline admin-btn" style={{ minHeight: '40px', color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDeleteEvent}>🗑️ Delete</button>
                     </div>
                 )}
             </div>
@@ -245,9 +245,9 @@ const EventCard = ({ event }) => {
                             <button className="btn" onClick={() => setShowPayments(false)}>✕</button>
                         </div>
 
-                        <div className="payment-list mt-4">
+                        <div className="payment-list mt-4" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                             {eventPayments.length === 0 ? <div className="text-center p-12 bg-main rounded-lg italic">No payments submitted for this event yet.</div> : (
-                                <table className="w-100" style={{ borderCollapse: 'collapse' }}>
+                                <table className="w-100" style={{ borderCollapse: 'collapse', minWidth: '600px' }}>
                                     <thead>
                                         <tr className="text-left border-bottom">
                                             <th className="p-2">Student</th>
@@ -260,7 +260,7 @@ const EventCard = ({ event }) => {
                                     <tbody>
                                         {eventPayments.map(p => (
                                             <tr key={p.id} className="border-bottom">
-                                                <td className="p-2"><strong>{p.userName}</strong></td>
+                                                <td className="p-2" style={{ whiteSpace: 'nowrap' }}><strong>{p.userName}</strong></td>
                                                 <td className="p-2">₹{p.amount || '0'}</td>
                                                 <td className="p-2">
                                                     <div style={{ width: '60px', height: '40px', background: '#eee', borderRadius: '4px', cursor: 'pointer', overflow: 'hidden' }} onClick={() => setSelectedScreenshot(p.screenshot)}>

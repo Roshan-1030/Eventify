@@ -49,9 +49,9 @@ const StudentDashboard = () => {
             </div>
 
             {/* Search and Discovery Tools */}
-            <div className="glass-panel mb-8 flex flex-col gap-4">
-                <div className="flex gap-4 items-center flex-wrap">
-                    <div className="form-group flex-1" style={{ marginBottom: 0, minWidth: '250px' }}>
+            <div className="glass-panel mb-8">
+                <div className="flex flex-col md-flex-row gap-4 items-center">
+                    <div className="form-group mb-0 w-100" style={{ flex: 1 }}>
                         <input 
                             type="text" 
                             className="form-control" 
@@ -60,13 +60,13 @@ const StudentDashboard = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap justify-center md-justify-start">
                         {availableCategories.map(cat => (
                             <button 
                                 key={cat} 
                                 className={`btn btn-sm ${activeCategory === cat ? 'btn-primary' : 'btn-outline'}`}
                                 onClick={() => setActiveCategory(cat)}
-                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', minHeight: '36px' }}
                             >
                                 {cat}
                             </button>
