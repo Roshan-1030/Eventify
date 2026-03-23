@@ -10,12 +10,6 @@ const LandingPage = () => {
 
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', paddingTop: '2rem' }}>
-            {/* Theme Toggle for Landing */}
-            <div className="flex justify-end mb-4 pr-4">
-                <button className="btn btn-outline" onClick={toggleTheme} style={{ borderRadius: '50px', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {state.theme === 'dark' ? '🔆 Light Mode' : '🌙 Dark Mode'}
-                </button>
-            </div>
 
             {/* Hero Section */}
             <div className="glass-panel text-center" style={{ padding: '4rem 2rem', marginBottom: '3rem', position: 'relative', overflow: 'hidden' }}>
