@@ -77,7 +77,7 @@ const Chat = () => {
                                     <strong style={{ fontSize: '0.9rem', color: c.userId === state.user.id ? 'var(--primary)' : 'inherit' }}>{c.userName}</strong>
                                     <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', opacity: 0.6 }}>{c.time}</span>
                                 </div>
-                                <div style={{ fontSize: '0.95rem', color: '#000000', lineHeight: '1.4' }}>{c.text}</div>
+                                <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>{c.text}</div>
                             </div>
                         ))
                     )}

@@ -173,7 +173,7 @@ const Groups = () => {
                                         </strong>
                                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', opacity: 0.6 }}>{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.95rem', color: '#000000', lineHeight: '1.4' }}>{msg.text}</div>
+                                    <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>{msg.text}</div>
                                 </div>
                             ))}
                         </div>
