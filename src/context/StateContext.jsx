@@ -34,7 +34,8 @@ const initialState = {
         address: 'Academic Block-A, University Campus, New Delhi',
         instagram: '@eventify_official',
         twitter: '@eventify_org'
-    }
+    },
+    theme: 'light'
 };
 
 const StateContext = createContext();
@@ -110,6 +111,11 @@ export const StateProvider = ({ children }) => {
     const addFeedback = (fb) => setState(prev => ({ ...prev, feedbacks: [...prev.feedbacks, fb] }));
     const addAnnouncement = (ann) => setState(prev => ({ ...prev, announcements: [...prev.announcements, ann] }));
     const addChat = (chat) => setState(prev => ({ ...prev, chats: [...prev.chats, chat] }));
+    const toggleTheme = () => setState(prev => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }));
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', state.theme || 'light');
+    }, [state.theme]);
     
     return (
         <StateContext.Provider value={{ 
@@ -121,7 +127,8 @@ export const StateProvider = ({ children }) => {
             updateUsers,
             addFeedback,
             addAnnouncement,
-            addChat
+            addChat,
+            toggleTheme
         }}>
             {children}
         </StateContext.Provider>

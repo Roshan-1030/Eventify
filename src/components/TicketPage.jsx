@@ -32,9 +32,9 @@ const TicketPage = () => {
                 maxWidth: '750px', 
                 overflow: 'hidden', 
                 border: 'none',
-                boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.4)',
+                boxShadow: 'var(--premium-shadow)',
                 position: 'relative',
-                background: 'white',
+                background: 'var(--card-bg)',
                 animation: 'slideIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
             }}>
                 {/* Visual Accent */}
@@ -68,15 +68,15 @@ const TicketPage = () => {
                             <div className="ticket-meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem', marginTop: '2.5rem' }}>
                                 <div className="meta-item">
                                     <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 700, fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Date</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1.2rem' }}>{event.date}</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>{event.date}</div>
                                 </div>
                                 <div className="meta-item">
                                     <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 700, fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Time</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1.2rem' }}>{event.time || '10:00 AM'}</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>{event.time || '10:00 AM'}</div>
                                 </div>
                                 <div className="meta-item" style={{ gridColumn: 'span 2' }}>
                                     <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 700, fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Venue Address</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1.2rem' }}>{event.location || 'College Main Campus'}</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>{event.location || 'College Main Campus'}</div>
                                 </div>
                             </div>
                         </div>
@@ -84,7 +84,7 @@ const TicketPage = () => {
                         <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px dashed rgba(255,255,255,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                             <div>
                                 <small style={{ opacity: 0.7, textTransform: 'uppercase' }}>Attendee</small>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>{payment.userName}</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white' }}>{payment.userName}</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <small style={{ opacity: 0.7, textTransform: 'uppercase' }}>Entry Status</small>
@@ -102,7 +102,7 @@ const TicketPage = () => {
                     {/* QR Verification Section */}
                     <div className="ticket-qr-section" style={{ 
                         flex: 1, 
-                        background: 'white', 
+                        background: 'var(--card-bg)', 
                         display: 'flex', 
                         flexDirection: 'column', 
                         alignItems: 'center', 

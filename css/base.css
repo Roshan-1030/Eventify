@@ -18,6 +18,39 @@
     --font-main: 'Outfit', 'Inter', sans-serif;
 }
 
+[data-theme='dark'] {
+    --bg-main: #000000;
+    --card-bg: #0a0a0a;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --border: #1a1a1a;
+    --premium-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.8);
+    --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.9);
+}
+
+[data-theme='dark'] .glass-panel,
+[data-theme='dark'] .sidebar,
+[data-theme='dark'] .modal-content,
+[data-theme='dark'] header.glass-panel {
+    background: rgba(10, 10, 10, 0.8) !important;
+    border-color: #1a1a1a !important;
+}
+
+[data-theme='dark'] .form-control {
+    background: #050505 !important;
+    color: #ffffff !important;
+}
+
+[data-theme='dark'] .form-control:focus {
+    background: #000000 !important;
+}
+
+[data-theme='dark'] body {
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.08) 0px, transparent 50%);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -182,6 +215,10 @@ p {
     font-weight: bold;
 }
 
+.bg-danger { background: var(--danger) !important; color: white !important; }
+.bg-success { background: var(--success) !important; color: white !important; }
+.bg-warning { background: var(--danger) !important; color: white !important; }
+
 /* Base Layout */
 #app { display: flex; min-height: 100vh; }
 .app-layout { display: flex; flex-direction: column; min-height: 100vh; width: 100%; }
@@ -298,18 +335,24 @@ header.glass-panel { border-radius: 0; }
 .gap-8 { gap: 2rem; }
 .grid { display: grid; }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
 .col-span-2 { grid-column: span 2 / span 2; }
 .md-flex-row { flex-direction: column; }
 .md-justify-start { justify-content: center; }
 
 @media (min-width: 768px) {
-    .grid-2, .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
     .md-flex-row { flex-direction: row; }
     .md-justify-start { justify-content: flex-start; }
 }
 
+@media (min-width: 1024px) {
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
 @media (max-width: 768px) {
-    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     .col-span-2 { grid-column: span 1 / span 1; }
 }
 

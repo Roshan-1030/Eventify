@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
 const Header = () => {
-    const { state, logout } = useAppState();
+    const { state, logout, toggleTheme } = useAppState();
     const location = useLocation();
     
     const [isNavOpen, setIsNavOpen] = useState(false);
@@ -116,6 +116,18 @@ const Header = () => {
                                         </Link>
                                     );
                                 })}
+
+                                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '1rem', letterSpacing: '1.5px' }}>
+                                        Quick Settings
+                                    </div>
+                                    <button className="nav-link" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)', background: 'var(--bg-main)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); toggleTheme(); }}>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{state.theme === 'dark' ? '🔆' : '🌙'}</span>
+                                            <span>{state.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                                        </div>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

@@ -19,6 +19,7 @@ import EventDetails from './components/EventDetails';
 import Profile from './components/Profile';
 import Payment from './components/Payment';
 import TicketPage from './components/TicketPage';
+import LandingPage from './components/LandingPage';
 
 
 const AuthGuard = ({ children }) => {
@@ -68,6 +69,8 @@ const DashboardLayout = () => {
 };
 
 const App = () => {
+    const { state } = useAppState();
+    
     return (
         <BrowserRouter>
             <Routes>
@@ -81,9 +84,13 @@ const App = () => {
                 <Route
                     path="/"
                     element={
-                        <AuthGuard>
-                            <Layout><DashboardLayout /></Layout>
-                        </AuthGuard>
+                        state.user ? (
+                            <AuthGuard>
+                                <Layout><DashboardLayout /></Layout>
+                            </AuthGuard>
+                        ) : (
+                            <Layout><LandingPage /></Layout>
+                        )
                     }
                 />
 
