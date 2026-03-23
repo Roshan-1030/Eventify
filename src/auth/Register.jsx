@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase/firebase.js';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 const Register = () => {
@@ -12,6 +12,7 @@ const Register = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleRegister = async (e) => {
         e.preventDefault();
@@ -71,6 +72,43 @@ const Register = () => {
         }
     };
 
+    const handleGoogleRegister = async () => {
+        setError('');
+        setLoading(true);
+        const provider = new GoogleAuthProvider();
+
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            const docRef = doc(db, "profiles", user.uid);
+            const docSnap = await getDoc(docRef);
+
+            if (!docSnap.exists()) {
+                const randomStr = Math.floor(10000 + Math.random() * 90000);
+                const roomId = `ADM-${randomStr}`;
+
+                await setDoc(docRef, {
+                    id: user.uid,
+                    name: user.displayName || "Admin User",
+                    email: user.email,
+                    role: "admin",
+                    room_id: roomId,
+                    createdAt: new Date()
+                });
+                alert(`🎉 Room Created Successfully!\n\nYour Admin ID: ${roomId}`);
+            } else {
+                alert("Account already exists. Logging you in...");
+            }
+            
+            navigate("/login");
+        } catch (err) {
+            setError(err.message.replace("Firebase: ", ""));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="auth-page-wrapper flex items-center justify-center w-100" style={{ minHeight: '100vh', background: 'var(--bg-main)' }}>
             <div className="glass-panel login-container text-center" style={{ maxWidth: '450px', width: '90%' }}>
@@ -90,13 +128,26 @@ const Register = () => {
                         <input type="email" className="form-control" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
 
-                    <div className="form-group" style={{ textAlign: 'left' }}>
+                    <div className="form-group" style={{ textAlign: 'left', position: 'relative' }}>
                         <label style={{ fontWeight: 700 }}>Password</label>
-                        <input type="password" className="form-control" value={password} onChange={e => setPassword(e.target.value)} required />
+                        <input type={showPassword ? "text" : "password"} className="form-control" value={password} onChange={e => setPassword(e.target.value)} required style={{ paddingRight: '2.5rem' }} />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '10px', bottom: '10px', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, display: 'flex', color: 'var(--text-primary)' }}>
+                            {showPassword ? (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            ) : (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            )}
+                        </button>
                     </div>
 
                     <button type="submit" className="btn btn-primary w-100 mt-4" disabled={loading}>
                         {loading ? "Creating Account..." : "Create My Event Room"}
+                    </button>
+
+                    <div className="text-secondary text-xs my-4">Or sign up with</div>
+                    <button type="button" className="btn btn-outline w-100" onClick={handleGoogleRegister} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', border: '1px solid #ddd', background: 'white' }}>
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px' }} />
+                        Google
                     </button>
                 </form>
 
