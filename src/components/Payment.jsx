@@ -6,28 +6,41 @@ import { collection, addDoc } from 'firebase/firestore';
 
 const Payment = () => {
     const { eventId } = useParams();
-    const { state, setState } = useAppState();
+    const { state } = useAppState();
     const navigate = useNavigate();
 
-    const event = state.events.find(e => String(e.id) === String(eventId));
+    const event = (state.events || []).find(e => String(e.id) === String(eventId));
     const [screenshot, setScreenshot] = useState("");
     const [loading, setLoading] = useState(false);
 
-    if (!event) return <div className="p-12 text-center"><h1>Event Not Found</h1></div>;
+    if (!event) {
+        return (
+            <div className="glass-panel text-center p-8" style={{ maxWidth: '500px', margin: '2rem auto' }}>
+                <h1>Event Not Found</h1>
+                <button className="btn btn-primary mt-4" onClick={() => navigate('/')}>Back Home</button>
+            </div>
+        );
+    }
 
-    const existingPayment = (state.payments || []).find(p => String(p.eventId) === String(event.id) && String(p.userId) === String(state.user.id));
+    const existingPayment = (state.payments || []).find(p => String(p.eventId) === String(event.id) && String(p.userId) === String(state.user?.id));
     if (existingPayment) {
         return (
             <div className="payment-page flex items-center justify-center p-4" style={{ minHeight: '80vh' }}>
-                <div className="glass-panel text-center" style={{ maxWidth: '500px', width: '100%', padding: '3rem' }}>
-                    <h1 style={{ color: 'var(--success)' }}>✅ Payment Done</h1>
-                    <p className="mb-6">Your payment screenshot has already been submitted and is in the system.</p>
+                <div className="glass-panel text-center" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem 1.5rem' }}>
+                    <h1 style={{ color: 'var(--success)', fontSize: '1.8rem', marginBottom: '0.5rem' }}>✅ Payment Submitted</h1>
+                    <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>
+                        Your payment proof for <strong>{event.title}</strong> is on record.
+                    </p>
                     {existingPayment.ticketIssued ? (
-                        <div className="p-4 bg-success text-white rounded-lg mb-4 font-bold" style={{ fontSize: '1.2rem' }}>🎟️ E-Ticket Officially Issued</div>
+                        <div className="p-3 bg-success text-white rounded-lg mb-4 font-bold" style={{ fontSize: '1rem' }}>
+                            🎟️ Official E-Ticket Ready
+                        </div>
                     ) : (
-                        <div className="p-4 bg-accent text-white rounded-lg mb-4 font-bold">⏳ Verification in Progress</div>
+                        <div className="p-3 rounded-lg mb-4 font-bold" style={{ background: 'var(--accent)', color: '#fff', fontSize: '0.95rem' }}>
+                            ⏳ Verification in Progress
+                        </div>
                     )}
-                    <button className="btn btn-outline w-100" onClick={() => navigate(-1)}>Back</button>
+                    <button className="btn btn-outline w-100" onClick={() => navigate(-1)}>← Back to Event</button>
                 </div>
             </div>
         );
@@ -68,7 +81,7 @@ const Payment = () => {
             eventId: event.id,
             userId: state.user.id,
             userName: state.user.name,
-            amount: event.fee,
+            amount: event.fee || '0',
             screenshot,
             status: 'pending',
             ticketIssued: false,
@@ -81,49 +94,59 @@ const Payment = () => {
             navigate('/');
         } catch(e) {
             console.error("Payment failed", e);
-            alert("Upload failed. Screenshot may be too large.");
+            alert("Upload failed. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="payment-page flex items-center justify-center p-4" style={{ minHeight: '80vh' }}>
-            <div className="glass-panel" style={{ maxWidth: '500px', width: '100%', padding: '2.5rem' }}>
+        <div className="payment-page flex items-center justify-center p-2" style={{ minHeight: '80vh' }}>
+            <div className="glass-panel" style={{ maxWidth: '480px', width: '100%', padding: 'clamp(1.5rem, 3vw, 2.5rem)' }}>
                 <div className="text-center mb-6">
-                    <h1 style={{ margin: 0 }}>Secure Payment</h1>
-                    <p className="text-secondary">Registering for: <strong>{event.title}</strong></p>
+                    <h1 style={{ margin: '0 0 0.25rem 0', fontSize: 'clamp(1.5rem, 3vw, 2rem)' }}>Event Payment</h1>
+                    <p className="text-secondary" style={{ fontSize: '0.9rem', margin: 0 }}>
+                        Paying for: <strong>{event.title}</strong>
+                    </p>
                 </div>
 
-                <div className="payment-card bg-main p-6 rounded-lg text-center border-dashed mb-6" style={{ background: 'rgba(0,0,0,0.02)', border: '2px dashed var(--border)' }}>
-                    <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>TOTAL AMOUNT TO PAY</div>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)', margin: '0.5rem 0' }}>₹{event.fee || '0'}</div>
+                <div className="glass-panel text-center mb-6" style={{ background: 'rgba(99, 102, 241, 0.04)', border: '1.5px dashed var(--primary)', padding: '1.5rem' }}>
+                    <small style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', fontWeight: 700 }}>Total Payable Amount</small>
+                    <div style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', fontWeight: 900, color: 'var(--primary)', margin: '0.25rem 0' }}>
+                        ₹{event.fee || '0'}
+                    </div>
                     
                     {event.qrUrl ? (
-                        <div className="mt-4">
-                            <p style={{ fontSize: '0.85rem' }}>Scan this QR to pay:</p>
-                            <img src={event.qrUrl} alt="Payment QR" style={{ width: '200px', height: '200px', objectFit: 'contain', margin: '1rem auto', padding: '10px', background: 'white', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                        <div className="mt-3">
+                            <p style={{ fontSize: '0.82rem', marginBottom: '0.5rem' }}>Scan using UPI / Payment App:</p>
+                            <div style={{ padding: '8px', background: '#ffffff', borderRadius: '12px', display: 'inline-block', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+                                <img src={event.qrUrl} alt="Payment QR" style={{ width: '160px', height: '160px', objectFit: 'contain', display: 'block' }} />
+                            </div>
                         </div>
                     ) : (
-                        <div className="p-4 mt-4 bg-accent text-white rounded">Admin has not uploaded a QR yet. Please contact the coordinator.</div>
+                        <div className="p-3 mt-3 rounded text-sm" style={{ background: 'rgba(14, 165, 233, 0.1)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>
+                            No QR code provided. Please contact event coordinator for manual verification.
+                        </div>
                     )}
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group mb-6">
-                        <label style={{ fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Upload Payment Screenshot *</label>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                    <div className="form-group mb-4">
+                        <label>Upload Payment Screenshot Proof *</label>
                         <input type="file" className="form-control" accept="image/*" onChange={handleFileUpload} required />
                         {screenshot && (
-                            <div className="mt-4 p-2 border rounded" style={{ height: '100px', overflow: 'hidden' }}>
+                            <div className="mt-3 p-2 border rounded" style={{ height: '90px', overflow: 'hidden', borderRadius: '8px' }}>
                                 <img src={screenshot} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </div>
                         )}
                     </div>
 
-                    <button type="submit" className="btn btn-primary w-100 py-3" disabled={loading || !event.qrUrl}>
+                    <button type="submit" className="btn btn-primary w-100" disabled={loading || !screenshot}>
                         {loading ? "Submitting..." : "Submit Payment Proof"}
                     </button>
-                    <button type="button" className="btn btn-outline w-100 mt-2" onClick={() => navigate(-1)}>Back</button>
+                    <button type="button" className="btn btn-outline w-100" onClick={() => navigate(-1)}>
+                        Cancel
+                    </button>
                 </form>
             </div>
         </div>

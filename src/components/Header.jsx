@@ -9,18 +9,32 @@ const Header = () => {
     const [isNavOpen, setIsNavOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-    const toggleNav = (e) => { e.stopPropagation(); setIsNavOpen(!isNavOpen); setIsProfileOpen(false); };
-    const toggleProfile = (e) => { e.stopPropagation(); setIsProfileOpen(!isProfileOpen); setIsNavOpen(false); };
-    const closeAll = () => { setIsNavOpen(false); setIsProfileOpen(false); };
+    const toggleNav = (e) => { 
+        e.stopPropagation(); 
+        setIsNavOpen(!isNavOpen); 
+        setIsProfileOpen(false); 
+    };
+
+    const toggleProfile = (e) => { 
+        e.stopPropagation(); 
+        setIsProfileOpen(!isProfileOpen); 
+        setIsNavOpen(false); 
+    };
+
+    const closeAll = () => { 
+        setIsNavOpen(false); 
+        setIsProfileOpen(false); 
+    };
 
     const [viewedCounts, setViewedCounts] = useState({ announcements: 0, polls: 0 });
-    const roomAnnouncementsCount = (state.announcements || []).filter(a => a.roomId === state.user?.roomId).length;
-    const roomPollsCount = (state.polls || []).filter(p => p.roomId === state.user?.roomId).length;
+    const userRoomId = state.user?.roomId || '';
+    const roomAnnouncementsCount = (state.announcements || []).filter(a => a.roomId === userRoomId).length;
+    const roomPollsCount = (state.polls || []).filter(p => p.roomId === userRoomId).length;
     const newAnnouncements = Math.max(0, roomAnnouncementsCount - viewedCounts.announcements);
     const newPolls = Math.max(0, roomPollsCount - viewedCounts.polls);
 
     useEffect(() => {
-        if (!state.user) return;
+        if (!state.user?.id) return;
         const stored = localStorage.getItem(`viewedData_${state.user.id}`);
         if (stored) {
             try { setViewedCounts(JSON.parse(stored)); } catch (e) { }
@@ -28,7 +42,7 @@ const Header = () => {
     }, [state.user]);
 
     useEffect(() => {
-        if (!state.user) return;
+        if (!state.user?.id) return;
         let changed = false;
         let newCounts = { ...viewedCounts };
         
@@ -53,6 +67,16 @@ const Header = () => {
         return () => window.removeEventListener('click', handleClickOutside);
     }, []);
 
+    // Prevent body scrolling when mobile drawer is open
+    useEffect(() => {
+        if (isNavOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isNavOpen]);
+
     const navItems = [
         // Public links for guests
         { path: '/', icon: '🏠', text: 'Home', isPublic: true, isGuestOnly: true },
@@ -63,7 +87,7 @@ const Header = () => {
         { path: '/', icon: '🏠', text: 'Dashboard', isPublic: false },
         { path: '/announcements', icon: '📢', text: 'Announcements', isPublic: false },
         { path: '/polls', icon: '📊', text: 'Polls', isPublic: false },
-        { path: '/groups', icon: '👥', text: 'Groups', isPublic: false },
+        { path: '/groups', icon: '👥', text: 'Communities', isPublic: false },
         { path: '/chat', icon: '💬', text: 'Discussion', isPublic: false },
         { path: '/gallery', icon: '🖼️', text: 'Gallery', isPublic: false },
         { path: '/reports', icon: '📈', text: 'Reports', isPublic: false, isAdminOnly: true },
@@ -81,103 +105,239 @@ const Header = () => {
     });
 
     const isActive = (item) => {
-        if (item.path === '/') return location.pathname === '/';
+        if (item.path === '/') return location.pathname === '/' && !location.hash;
+        if (item.path.startsWith('/#')) return location.hash === item.path.substring(1);
         return location.pathname.startsWith(item.path);
     };
 
+    const userName = state.user?.name || state.user?.email || 'User';
+    const userInitial = (state.user?.name || state.user?.email || 'U').charAt(0).toUpperCase();
+
     return (
-        <header className="glass-panel" style={{ borderRadius: 0, width: '100%', position: 'sticky', top: 0, zIndex: 100, padding: '1rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-            <div className="app-header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-                <div className="header-left-actions" style={{ flex: 1, display: 'flex', alignItems: 'center', position: 'relative' }}>
-                    <button className="btn" onClick={toggleNav} style={{ background: 'transparent', border: 'none', fontSize: '2rem', color: 'var(--text-primary)', cursor: 'pointer', padding: 0 }}>☰</button>
-                    
-                    {isNavOpen && (
-                        <div id="nav-options" className="glass-panel" style={{ display: 'block', position: 'fixed', top: '80px', left: '20px', minWidth: '250px', zIndex: 10000, padding: '1.5rem', border: '2px solid var(--text-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                            <div className="nav-links-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {filteredNavItems.map(item => {
-                                    if (item.path.startsWith('/#')) {
-                                        return (
-                                            <a key={item.path} href={item.path} className="nav-link" style={{ width: '100%' }} onClick={(e) => {
+        <header className="glass-panel">
+            <div className="app-header-container">
+                {/* Left: Navigation Menu Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-start' }}>
+                    <button 
+                        className="btn btn-sm" 
+                        onClick={toggleNav} 
+                        aria-label="Toggle Navigation Menu"
+                        style={{ 
+                            background: 'transparent', 
+                            border: 'none', 
+                            fontSize: '1.6rem', 
+                            color: 'var(--text-primary)', 
+                            cursor: 'pointer', 
+                            padding: '0.4rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: '40px',
+                            minWidth: '40px'
+                        }}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                
+                {/* Center: Brand Logo */}
+                <Link to="/" onClick={closeAll} style={{ textDecoration: 'none', textAlign: 'center', flex: 2, display: 'flex', justifyContent: 'center' }}>
+                    <span className="logo">
+                        Eventify
+                    </span>
+                </Link>
+                
+                {/* Right: Profile or Login */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flex: 1, position: 'relative' }}>
+                    {state.user ? (
+                        <>
+                            <button 
+                                className="user-profile-sm" 
+                                style={{ 
+                                    margin: 0, 
+                                    padding: '0.2rem 0.4rem', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    border: 'none', 
+                                    background: 'transparent', 
+                                    cursor: 'pointer',
+                                    gap: '0.5rem',
+                                    borderRadius: '999px'
+                                }} 
+                                onClick={toggleProfile}
+                            >
+                                <div className="hide-on-mobile" style={{ textAlign: 'right' }}>
+                                    <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-primary)' }}>{userName}</div>
+                                    <span className={`badge badge-${state.user.role || 'student'}`} style={{ fontSize: '0.62rem', padding: '0.15rem 0.5rem' }}>{state.user.role || 'student'}</span>
+                                </div>
+                                <div className="avatar" style={{ width: '38px', height: '38px', fontSize: '1rem' }}>
+                                    {userInitial}
+                                </div>
+                            </button>
+                            
+                            {isProfileOpen && (
+                                <div 
+                                    className="glass-panel" 
+                                    style={{ 
+                                        position: 'absolute', 
+                                        top: 'calc(100% + 10px)', 
+                                        right: 0, 
+                                        minWidth: '220px', 
+                                        maxWidth: '90vw', 
+                                        zIndex: 10001, 
+                                        padding: '0.5rem 0', 
+                                        boxShadow: 'var(--premium-shadow)',
+                                        borderRadius: 'var(--radius-md)',
+                                        border: '1px solid var(--border)'
+                                    }}
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>
+                                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{userName}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{state.user.email || 'No email'}</div>
+                                        <div className="mt-2">
+                                            <span className="badge badge-admin" style={{ fontSize: '0.65rem' }}>Room: {state.user.roomId || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <ul style={{ listStyle: 'none', padding: '0.25rem 0', margin: 0 }}>
+                                        <li>
+                                            <Link to="/profile" className="dropdown-item" onClick={closeAll} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                <span>👤</span> Manage Profile
+                                            </Link>
+                                        </li>
+                                        <li>
+                                            <button 
+                                                className="dropdown-item" 
+                                                onClick={() => { toggleTheme(); }} 
+                                                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-primary)' }}
+                                            >
+                                                <span>{state.theme === 'dark' ? '🔆' : '🌙'}</span> {state.theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
+                                            </button>
+                                        </li>
+                                        <li><hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '0.4rem 0' }} /></li>
+                                        <li>
+                                            <button 
+                                                className="dropdown-item" 
+                                                onClick={() => { logout(); closeAll(); }} 
+                                                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 700 }}
+                                            >
+                                                <span>🚪</span> Sign Out
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <Link to="/login" className="btn btn-primary btn-sm" style={{ padding: '0.5rem 1.25rem' }}>Login</Link>
+                    )}
+                </div>
+            </div>
+
+            {/* Modern Slide-in Navigation Drawer */}
+            {isNavOpen && (
+                <>
+                    <div className="nav-drawer-backdrop" onClick={closeAll} />
+                    <div className="nav-drawer" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span className="logo" style={{ fontSize: '1.4rem' }}>Eventify</span>
+                            </div>
+                            <button 
+                                className="btn btn-sm" 
+                                onClick={closeAll}
+                                aria-label="Close Navigation"
+                                style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--text-secondary)', padding: '0.25rem', minHeight: '36px', minWidth: '36px' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {state.user && (
+                            <div style={{ padding: '0.75rem', background: 'rgba(99, 102, 241, 0.08)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+                                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{userName}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                                    Room ID: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId || 'N/A'}</strong>
+                                </div>
+                            </div>
+                        )}
+
+                        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1, overflowY: 'auto' }}>
+                            {filteredNavItems.map(item => {
+                                if (item.path.startsWith('/#')) {
+                                    return (
+                                        <a 
+                                            key={item.path} 
+                                            href={item.path} 
+                                            className="nav-link" 
+                                            onClick={(e) => {
                                                 if (location.pathname === '/') {
                                                     e.preventDefault();
                                                     const target = document.getElementById(item.path.substring(2));
                                                     if (target) target.scrollIntoView({ behavior: 'smooth' });
                                                 }
                                                 closeAll();
-                                            }}>
-                                                <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{item.icon}</span>
-                                                {item.text}
-                                            </a>
-                                        );
-                                    }
-                                    return (
-                                        <Link key={item.path} to={item.path} className={`nav-link ${isActive(item) ? 'active' : ''}`} style={{ width: '100%', display: 'flex', alignItems: 'center' }} onClick={closeAll}>
-                                            <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{item.icon}</span>
-                                            <span style={{ flex: 1 }}>{item.text}</span>
-                                            {item.path === '/announcements' && newAnnouncements > 0 && (
-                                                <span className="badge" style={{ background: 'var(--danger)', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
-                                                    {newAnnouncements} New
-                                                </span>
-                                            )}
-                                            {item.path === '/polls' && newPolls > 0 && (
-                                                <span className="badge" style={{ background: 'var(--danger)', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
-                                                    {newPolls} New
-                                                </span>
-                                            )}
-                                        </Link>
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '1.15rem' }}>{item.icon}</span>
+                                            <span>{item.text}</span>
+                                        </a>
                                     );
-                                })}
+                                }
+                                return (
+                                    <Link 
+                                        key={item.path} 
+                                        to={item.path} 
+                                        className={`nav-link ${isActive(item) ? 'active' : ''}`} 
+                                        onClick={closeAll}
+                                    >
+                                        <span style={{ fontSize: '1.15rem' }}>{item.icon}</span>
+                                        <span style={{ flex: 1 }}>{item.text}</span>
+                                        {item.path === '/announcements' && newAnnouncements > 0 && (
+                                            <span className="badge badge-danger" style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem' }}>
+                                                {newAnnouncements} New
+                                            </span>
+                                        )}
+                                        {item.path === '/polls' && newPolls > 0 && (
+                                            <span className="badge badge-danger" style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem' }}>
+                                                {newPolls} New
+                                            </span>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </nav>
 
-                                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
-                                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '1rem', letterSpacing: '1.5px' }}>
-                                        Quick Settings
-                                    </div>
-                                    <button className="nav-link" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)', background: 'var(--bg-main)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); toggleTheme(); }}>
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '1.25rem', marginRight: '0.75rem' }}>{state.theme === 'dark' ? '🔆' : '🌙'}</span>
-                                            <span>{state.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-                
-                <Link to="/" className="logo-wrapper" style={{ textDecoration: 'none', textAlign: 'center', flex: 1 }}>
-                    <h1 className="logo mb-0" style={{ fontSize: '2.5rem', margin: 0 }}>
-                        Eventify
-                    </h1>
-                </Link>
-                
-                <div className="header-right-actions" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flex: 1, position: 'relative' }}>
-                    {state.user ? (
-                        <>
-                            <div className="user-profile-sm" style={{ margin: 0, padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={toggleProfile}>
-                                <div className="hide-on-mobile" style={{ marginRight: '0.5rem', textAlign: 'right' }}>
-                                    <div style={{ fontWeight: '800', fontSize: '0.85rem' }}>{state.user.name}</div>
-                                    <span className={`badge badge-${state.user.role}`} style={{ fontSize: '0.65rem' }}>{state.user.role}</span>
-                                </div>
-                                <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '1.1rem', backgroundColor: 'var(--primary)', color: 'white', fontWeight: 'bold' }}>{state.user.name.charAt(0).toUpperCase()}</div>
-                            </div>
-                            
-                            {isProfileOpen && (
-                                <div id="profile-dropdown" className="glass-panel" style={{ display: 'block', position: 'absolute', top: '100%', right: 0, minWidth: '200px', zIndex: 1000, padding: '0.5rem 0', marginTop: '1rem', border: '2px solid var(--text-primary)' }}>
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                        <li><Link to="/profile" className="dropdown-item" onClick={closeAll}>👤 View Profile</Link></li>
-                                        <li><hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '0.5rem 0' }} /></li>
-                                        <li><button className="dropdown-item" onClick={() => { logout(); closeAll(); }} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 'inherit', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            🚪 Sign Out
-                                        </button></li>
-                                    </ul>
-                                </div>
+                        <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                            <button 
+                                className="btn btn-outline w-100" 
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 1rem', fontSize: '0.85rem' }} 
+                                onClick={toggleTheme}
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span>{state.theme === 'dark' ? '🔆' : '🌙'}</span>
+                                    <span>{state.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                                </span>
+                                <span className="badge badge-accent" style={{ fontSize: '0.6rem' }}>Theme</span>
+                            </button>
+
+                            {state.user && (
+                                <button 
+                                    className="btn btn-danger btn-sm w-100 mt-2" 
+                                    onClick={() => { logout(); closeAll(); }}
+                                    style={{ padding: '0.6rem' }}
+                                >
+                                    🚪 Sign Out
+                                </button>
                             )}
-                        </>
-                    ) : (
-                        <Link to="/login" className="btn btn-primary" style={{ padding: '0.6rem 1.4rem' }}>Login</Link>
-                    )}
-                </div>
-            </div>
+                        </div>
+                    </div>
+                </>
+            )}
         </header>
     );
 };

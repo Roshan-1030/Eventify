@@ -13,7 +13,8 @@ const Groups = () => {
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDesc, setNewGroupDesc] = useState('');
     const [chatInput, setChatInput] = useState('');
-    const [inspectedUser, setInspectedUser] = useState(null); 
+    const [inspectedUser, setInspectedUser] = useState(null);
+    const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'members'
     const chatRef = useRef(null);
 
     const groupId = routeGroupId || null;
@@ -29,8 +30,8 @@ const Groups = () => {
         if (!newGroupName.trim()) return alert('Group name is required');
         const newGroup = {
             roomId: state.user.roomId,
-            name: newGroupName,
-            description: newGroupDesc,
+            name: newGroupName.trim(),
+            description: newGroupDesc.trim(),
             members: [{ id: state.user.id, name: state.user.name, email: state.user.email, roleInGroup: 'admin' }],
             requests: [],
             messages: [],
@@ -38,8 +39,10 @@ const Groups = () => {
         };
         try {
             await addDoc(collection(db, "groups"), newGroup);
-            setNewGroupName(''); setNewGroupDesc(''); setIsCreateModalOpen(false);
-        } catch(e) { console.error(e); }
+            setNewGroupName(''); 
+            setNewGroupDesc(''); 
+            setIsCreateModalOpen(false);
+        } catch(e) { console.error("Create group error:", e); }
     };
 
     const handleMemberAction = async (userId, action) => {
@@ -55,7 +58,7 @@ const Groups = () => {
         } else if (action === 'demote') {
             updatedMembers[mIdx] = { ...updatedMembers[mIdx], roleInGroup: 'student' };
         } else if (action === 'remove') {
-            if (!window.confirm("Remove member?")) return;
+            if (!window.confirm("Remove this member from the group?")) return;
             updatedMembers.splice(mIdx, 1);
         }
 
@@ -92,7 +95,7 @@ const Groups = () => {
         if (!chatInput.trim() || !currentGroup) return;
 
         const newMessages = [...(currentGroup.messages || [])];
-        newMessages.push({ userId: state.user.id, userName: state.user.name, text: chatInput, time: Date.now() });
+        newMessages.push({ userId: state.user.id, userName: state.user.name, text: chatInput.trim(), time: Date.now() });
         
         try {
             await updateDoc(doc(db, "groups", currentGroup.id), { messages: newMessages });
@@ -121,8 +124,9 @@ const Groups = () => {
         return isNaN(d.getTime()) ? String(t) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    // Detailed Group Chat Screen
     if (groupId && currentGroup) {
-        const isGlobalAdmin = state.user.role === 'admin';
+        const isGlobalAdmin = state.user?.role === 'admin';
         const membersList = currentGroup.members || [];
         const memberSelf = membersList.find(m => String(m.id) === String(state.user.id));
         const isGroupAdmin = isGlobalAdmin || memberSelf?.roleInGroup === 'admin' || memberSelf?.roleInGroup === 'co-admin';
@@ -131,7 +135,7 @@ const Groups = () => {
         if (!isMember) {
             const hasRequested = (currentGroup.requests || []).some(r => r.id === state.user.id);
             return (
-                <div className="text-center p-12 glass-panel" style={{ maxWidth: '500px', margin: '2rem auto' }}>
+                <div className="text-center p-8 glass-panel" style={{ maxWidth: '500px', margin: '2rem auto' }}>
                     <h1 style={{ color: 'var(--danger)' }}>Private Group</h1>
                     <p>Access restricted to <strong>{currentGroup.name}</strong> members.</p>
                     
@@ -155,69 +159,123 @@ const Groups = () => {
 
         return (
             <div className="group-details">
-                <div className="flex justify-between items-center mb-6">
-                    <button className="btn btn-outline" onClick={() => navigate('/groups')}>← Back</button>
-                    <div className="flex gap-2">
-                        {isGroupAdmin && <button className={`btn btn-sm ${currentGroup.isMuted ? 'btn-success' : 'btn-outline'}`} onClick={toggleGroupMute}>{currentGroup.isMuted ? '🔊 Unmute Room' : '🔇 Mute Room'}</button>}
-                        {isGlobalAdmin && <button className="btn btn-sm btn-outline text-danger" onClick={async () => { if(window.confirm('Delete group?')) { try { await deleteDoc(doc(db, "groups", currentGroup.id)); navigate('/groups'); } catch(e){} } }}>🗑️ Delete</button>}
+                {/* Group Header */}
+                <div className="dashboard-header" style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <button className="btn btn-outline btn-sm" onClick={() => navigate('/groups')} style={{ borderRadius: 'var(--radius-sm)' }}>
+                            ← Back
+                        </button>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: 'clamp(1.2rem, 3vw, 1.6rem)' }}>{currentGroup.name}</h2>
+                            <small className="text-secondary">{membersList.length} members {currentGroup.isMuted && '• 🔇 Muted'}</small>
+                        </div>
+                    </div>
+                    <div className="header-actions">
+                        {isGroupAdmin && (
+                            <button className={`btn btn-xs ${currentGroup.isMuted ? 'btn-success' : 'btn-outline'}`} onClick={toggleGroupMute}>
+                                {currentGroup.isMuted ? '🔊 Unmute' : '🔇 Mute'}
+                            </button>
+                        )}
+                        {isGlobalAdmin && (
+                            <button className="btn btn-xs btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={async () => { 
+                                if (window.confirm('Delete this community group?')) { 
+                                    try { 
+                                        await deleteDoc(doc(db, "groups", currentGroup.id)); 
+                                        navigate('/groups'); 
+                                    } catch(e){} 
+                                } 
+                            }}>
+                                🗑️ Delete
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                <div className="grid grid-3 gap-8">
-                    <div className="glass-panel col-span-2 flex flex-col" style={{ height: '70vh', padding: '1.5rem' }}>
-                        <div className="flex justify-between items-center pb-4 border-bottom">
-                            <h2 style={{ margin: 0 }}>{currentGroup.name}</h2>
-                            {currentGroup.isMuted && <span className="badge badge-danger">CHAT MUTED</span>}
-                        </div>
-                        
-                        <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', margin: '1rem 0', padding: '0.5rem', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                {/* Mobile View Tab Switcher (Chat vs Members) */}
+                <div className="flex gap-2 mb-4" style={{ display: 'flex' }}>
+                    <button 
+                        className={`btn btn-sm ${activeTab === 'chat' ? 'btn-primary' : 'btn-outline'}`} 
+                        onClick={() => setActiveTab('chat')}
+                        style={{ flex: 1 }}
+                    >
+                        💬 Messages ({messagesList.length})
+                    </button>
+                    <button 
+                        className={`btn btn-sm ${activeTab === 'members' ? 'btn-primary' : 'btn-outline'}`} 
+                        onClick={() => setActiveTab('members')}
+                        style={{ flex: 1 }}
+                    >
+                        👥 Members ({membersList.length}) {(currentGroup.requests || []).length > 0 && `• ${(currentGroup.requests || []).length} req`}
+                    </button>
+                </div>
+
+                {/* Main Content Area */}
+                {activeTab === 'chat' ? (
+                    <div className="glass-panel flex flex-col" style={{ height: 'calc(100vh - 270px)', minHeight: '400px', padding: '1.25rem' }}>
+                        <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem', padding: '0.5rem' }}>
                             {messagesList.length === 0 ? (
-                                <p className="text-secondary text-center p-8">No messages yet. Say hello to the group!</p>
+                                <p className="text-secondary text-center py-12">No messages yet. Say hello to the community!</p>
                             ) : (
                                 messagesList.map((msg, i) => (
-                                    <div key={i} className="mb-4" style={{ 
+                                    <div key={i} className="mb-3" style={{ 
                                         borderLeft: msg.userId === state.user.id ? '3px solid var(--primary)' : '3px solid transparent', 
-                                        paddingLeft: '1rem' 
+                                        paddingLeft: '0.75rem',
+                                        background: msg.userId === state.user.id ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
+                                        borderRadius: '0 8px 8px 0',
+                                        padding: '0.4rem 0.75rem'
                                     }}>
                                         <div className="flex items-baseline gap-2 mb-1">
-                                            <strong style={{ fontSize: '0.9rem', color: msg.userId === state.user.id ? 'var(--primary)' : 'inherit', cursor: (isGlobalAdmin && msg.userId !== state.user.id) ? 'pointer' : 'default' }} 
+                                            <strong style={{ fontSize: '0.85rem', color: msg.userId === state.user.id ? 'var(--primary)' : 'inherit', cursor: (isGlobalAdmin && msg.userId !== state.user.id) ? 'pointer' : 'default' }} 
                                                      onClick={() => isGlobalAdmin && msg.userId !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === msg.userId))}>
                                                 {msg.userId === state.user.id ? 'You' : msg.userName} {(isGlobalAdmin && msg.userId !== state.user.id) && '🔍'}
                                             </strong>
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', opacity: 0.6 }}>{formatTime(msg.time)}</span>
+                                            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', opacity: 0.7 }}>{formatTime(msg.time)}</span>
                                         </div>
-                                        <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>{msg.text}</div>
+                                        <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: '1.45', wordBreak: 'break-word' }}>{msg.text}</div>
                                     </div>
                                 ))
                             )}
                         </div>
 
                         {(!currentGroup.isMuted || isGroupAdmin) ? (
-                            <form onSubmit={handleSendMessage} className="flex gap-2">
-                                <input type="text" className="form-control" placeholder="Share something..." value={chatInput} onChange={e => setChatInput(e.target.value)} />
-                                <button type="submit" className="btn btn-primary px-6">Send</button>
+                            <form onSubmit={handleSendMessage} className="flex gap-2" style={{ marginTop: 'auto' }}>
+                                <input type="text" className="form-control" placeholder="Type your message..." value={chatInput} onChange={e => setChatInput(e.target.value)} />
+                                <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Send</button>
                             </form>
-                        ) : <div className="text-center p-3 text-secondary italic">Chat is currently muted.</div>}
+                        ) : (
+                            <div className="text-center p-3 text-secondary" style={{ background: 'rgba(0,0,0,0.03)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                                🔇 Chat is muted by group coordinators.
+                            </div>
+                        )}
                     </div>
-
-                    <div className="flex flex-col gap-6">
-                        <div className="glass-panel">
-                            <h3>Participants ({membersList.length})</h3>
-                            <div className="mt-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                ) : (
+                    <div className="flex flex-col gap-4">
+                        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Community Members ({membersList.length})</h3>
+                            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                                 {membersList.map(m => (
-                                    <div key={m.id} className="flex items-start justify-between mb-3 pb-3 border-bottom">
+                                    <div key={m.id} className="flex items-center justify-between mb-3 pb-3 border-bottom flex-wrap gap-2">
                                         <div className="flex items-center gap-3">
-                                            <div className="avatar" style={{ width: '30px', height: '30px', fontSize: '0.7rem', cursor: (isGlobalAdmin && m.id !== state.user.id) ? 'pointer' : 'default' }} onClick={() => isGlobalAdmin && m.id !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === m.id))}>
+                                            <div className="avatar" style={{ width: '34px', height: '34px', fontSize: '0.8rem', cursor: (isGlobalAdmin && m.id !== state.user.id) ? 'pointer' : 'default' }} onClick={() => isGlobalAdmin && m.id !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === m.id))}>
                                                 {m.name ? m.name.charAt(0) : 'U'}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 800, fontSize: '0.8rem' }}>{m.name} {m.roleInGroup === 'admin' && <span className="badge badge-admin ml-1" style={{ fontSize: '0.5rem' }}>Admin</span>} {m.roleInGroup === 'co-admin' && <span className="badge badge-primary ml-1" style={{ fontSize: '0.5rem' }}>Co-Admin</span>}</div>
+                                                <div style={{ fontWeight: 800, fontSize: '0.88rem' }}>
+                                                    {m.name} 
+                                                    {m.roleInGroup === 'admin' && <span className="badge badge-admin" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>Admin</span>} 
+                                                    {m.roleInGroup === 'co-admin' && <span className="badge badge-primary" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>Co-Admin</span>}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{m.email}</div>
                                             </div>
                                         </div>
                                         {isGroupAdmin && m.id !== state.user.id && m.roleInGroup !== 'admin' && (
                                             <div className="flex gap-1">
-                                                <button className="btn btn-sm btn-outline btn-xs" onClick={() => handleMemberAction(m.id, m.roleInGroup === 'co-admin' ? 'demote' : 'promote')}>{m.roleInGroup === 'co-admin' ? '⬇' : '⬆'}</button>
-                                                <button className="btn btn-sm btn-outline btn-xs text-danger" onClick={() => handleMemberAction(m.id, 'remove')}>✖</button>
+                                                <button className="btn btn-xs btn-outline" onClick={() => handleMemberAction(m.id, m.roleInGroup === 'co-admin' ? 'demote' : 'promote')}>
+                                                    {m.roleInGroup === 'co-admin' ? 'Demote ⬇' : 'Promote ⬆'}
+                                                </button>
+                                                <button className="btn btn-xs btn-outline text-danger" onClick={() => handleMemberAction(m.id, 'remove')}>
+                                                    ✕
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -226,18 +284,20 @@ const Groups = () => {
                         </div>
 
                         {isGroupAdmin && (currentGroup.requests || []).length > 0 && (
-                            <div className="glass-panel text-left">
-                                <h3 style={{ color: 'var(--primary)' }}>Pending Requests ({(currentGroup.requests || []).length})</h3>
-                                <div className="mt-4 flex flex-col gap-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                                <h3 style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '1rem' }}>
+                                    Pending Requests ({(currentGroup.requests || []).length})
+                                </h3>
+                                <div className="flex flex-col gap-3">
                                     {(currentGroup.requests || []).map(req => (
-                                        <div key={req.id} className="flex items-center justify-between pb-3 border-bottom">
+                                        <div key={req.id} className="flex items-center justify-between pb-3 border-bottom flex-wrap gap-2">
                                             <div>
-                                                <strong style={{ display: 'block' }}>{req.name}</strong>
-                                                <small className="text-secondary">{req.email}</small>
+                                                <strong>{req.name}</strong>
+                                                <small className="text-secondary" style={{ display: 'block' }}>{req.email}</small>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button className="btn btn-xs btn-success text-white px-2 py-1" style={{ fontSize: '0.75rem' }} onClick={() => handleRequestAction(req, 'accept')}>✓ Accept</button>
-                                                <button className="btn btn-xs btn-outline text-danger px-2 py-1" style={{ fontSize: '0.75rem' }} onClick={() => handleRequestAction(req, 'reject')}>✕</button>
+                                                <button className="btn btn-xs btn-success" onClick={() => handleRequestAction(req, 'accept')}>✓ Accept</button>
+                                                <button className="btn btn-xs btn-danger" onClick={() => handleRequestAction(req, 'reject')}>✕ Reject</button>
                                             </div>
                                         </div>
                                     ))}
@@ -245,18 +305,21 @@ const Groups = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                )}
 
+                {/* Inspect User Profile Modal */}
                 {inspectedUser && (
-                    <div className="modal-overlay" style={{ display: 'flex' }} onClick={() => setInspectedUser(null)}>
-                        <div className="glass-panel" style={{ width: '90%', maxWidth: '400px', padding: '2rem' }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-overlay" onClick={() => setInspectedUser(null)}>
+                        <div className="glass-panel modal-content-panel" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
                             <div className="text-center">
-                                <div className="avatar mx-auto mb-4" style={{ width: '80px', height: '80px', fontSize: '2rem' }}>{inspectedUser.name.charAt(0)}</div>
-                                <h2>{inspectedUser.name}</h2>
-                                <p className="badge badge-primary">{inspectedUser.role.toUpperCase()}</p>
-                                <div className="text-left mt-6 flex flex-col gap-2">
+                                <div className="avatar mx-auto mb-4" style={{ width: '70px', height: '70px', fontSize: '1.8rem' }}>
+                                    {inspectedUser.name ? inspectedUser.name.charAt(0) : 'U'}
+                                </div>
+                                <h2 style={{ marginBottom: '0.25rem' }}>{inspectedUser.name}</h2>
+                                <span className="badge badge-primary">{inspectedUser.role ? inspectedUser.role.toUpperCase() : 'STUDENT'}</span>
+                                <div className="text-left mt-6 flex flex-col gap-2" style={{ fontSize: '0.9rem' }}>
                                     <div><strong>Email:</strong> {inspectedUser.email}</div>
-                                    <div><strong>Academic:</strong> {inspectedUser.branch} - {inspectedUser.year}</div>
+                                    <div><strong>Academic:</strong> {inspectedUser.branch || 'N/A'} - {inspectedUser.year || 'N/A'}</div>
                                 </div>
                                 <button className="btn btn-primary w-100 mt-6" onClick={() => setInspectedUser(null)}>Dismiss</button>
                             </div>
@@ -267,65 +330,113 @@ const Groups = () => {
         );
     }
 
+    // Communities List View
     return (
         <div className="groups-page">
-            <div className="flex justify-between items-center mb-6">
-                <div><h1>Communities</h1><p>Active Room: <strong>{state.user.roomId}</strong></p></div>
-                {state.user.role === 'admin' && <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>+ New Group</button>}
+            <div className="dashboard-header">
+                <div>
+                    <h1 style={{ marginBottom: '0.35rem' }}>Communities</h1>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+                        Room Circles & Groups for <strong>{state.user?.roomId}</strong>
+                    </p>
+                </div>
+                {state.user?.role === 'admin' && (
+                    <button className="btn btn-primary btn-sm" onClick={() => setIsCreateModalOpen(true)}>
+                        + Launch New Group
+                    </button>
+                )}
             </div>
 
+            {/* Create Group Modal */}
             {isCreateModalOpen && (
-                <div className="modal-overlay" style={{ display: 'flex' }} onClick={() => setIsCreateModalOpen(false)}>
-                    <div className="glass-panel" style={{ width: '90%', maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-                        <h2>Launch New Group</h2>
+                <div className="modal-overlay" onClick={() => setIsCreateModalOpen(false)}>
+                    <div className="glass-panel modal-content-panel" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 style={{ margin: 0 }}>Launch New Group</h2>
+                            <button className="btn btn-sm btn-outline" onClick={() => setIsCreateModalOpen(false)}>✕</button>
+                        </div>
                         <form onSubmit={handleCreateGroup} className="flex flex-col gap-4">
-                            <div className="form-group"><label>Group Name</label><input type="text" className="form-control" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} required /></div>
-                            <div className="form-group"><label>Description</label><textarea className="form-control" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} /></div>
-                            <button type="submit" className="btn btn-primary">Start Group</button>
+                            <div className="form-group">
+                                <label>Group / Circle Name *</label>
+                                <input type="text" className="form-control" placeholder="e.g. Robotics Club, Cultural Team" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Description</label>
+                                <textarea className="form-control" rows="3" placeholder="What is this community for?" value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} />
+                            </div>
+                            <div className="flex gap-2">
+                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Start Group</button>
+                                <button type="button" className="btn btn-outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
+                            </div>
                         </form>
                     </div>
                 </div>
             )}
 
+            {/* Groups Grid */}
             <div className="grid-cards">
-                {roomGroups.length === 0 ? <p className="text-secondary">Explore new communities here.</p> : roomGroups.map(g => {
-                    const isMember = (g.members || []).some(m => String(m.id) === String(state.user.id)) || state.user?.role === 'admin';
-                    const hasRequested = (g.requests || []).some(r => String(r.id) === String(state.user.id));
-                    
-                    return (
-                        <div key={g.id} className="glass-panel group-card" onClick={() => isMember && navigate(`/groups/${g.id}`)} style={{ cursor: isMember ? 'pointer' : 'default', transition: 'all 0.3s ease' }}>
-                            <div className="flex justify-between items-start">
-                                <h3>{g.name}</h3>
-                                {isMember && <span className="badge badge-success">✓ Member</span>}
-                            </div>
-                            <p className="text-truncate" style={{ minHeight: '3rem' }}>{g.description}</p>
-                            
-                            <div className="mt-4 pt-4 border-top flex justify-between items-center">
-                                <span className="badge badge-primary">{(g.members || []).length} Members</span>
+                {roomGroups.length === 0 ? (
+                    <div className="glass-panel text-center" style={{ padding: '3rem 1.5rem' }}>
+                        <p className="text-secondary" style={{ margin: 0 }}>No community groups created in this room yet.</p>
+                    </div>
+                ) : (
+                    roomGroups.map(g => {
+                        const isMember = (g.members || []).some(m => String(m.id) === String(state.user.id)) || state.user?.role === 'admin';
+                        const hasRequested = (g.requests || []).some(r => String(r.id) === String(state.user.id));
+                        
+                        return (
+                            <div 
+                                key={g.id} 
+                                className="glass-panel group-card" 
+                                onClick={() => isMember && navigate(`/groups/${g.id}`)} 
+                                style={{ 
+                                    cursor: isMember ? 'pointer' : 'default',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between'
+                                }}
+                            >
+                                <div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{g.name}</h3>
+                                        {isMember && <span className="badge badge-success" style={{ fontSize: '0.68rem' }}>✓ Member</span>}
+                                    </div>
+                                    <p className="text-truncate" style={{ minHeight: '2.8rem', fontSize: '0.88rem' }}>
+                                        {g.description || 'Community circle for event discussions.'}
+                                    </p>
+                                </div>
                                 
-                                {!isMember && state.user?.role === 'student' && (
-                                    hasRequested ? (
-                                        <button className="btn btn-sm btn-outline disabled" disabled>⏳ Pending</button>
-                                    ) : (
-                                        <button 
-                                            className="btn btn-sm btn-primary" 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Temporarily set as "current" to use existing join logic
-                                                // Or just invoke a specialized direct join
-                                                handleDirectJoin(g);
-                                            }}
-                                        >
-                                            Join Group
+                                <div className="mt-4 pt-3 border-top flex justify-between items-center">
+                                    <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+                                        {(g.members || []).length} Members
+                                    </span>
+                                    
+                                    {!isMember && state.user?.role === 'student' && (
+                                        hasRequested ? (
+                                            <button className="btn btn-xs btn-outline disabled" disabled>⏳ Pending</button>
+                                        ) : (
+                                            <button 
+                                                className="btn btn-xs btn-primary" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDirectJoin(g);
+                                                }}
+                                            >
+                                                Join Group
+                                            </button>
+                                        )
+                                    )}
+                                    
+                                    {isMember && (
+                                        <button className="btn btn-xs btn-outline" onClick={() => navigate(`/groups/${g.id}`)}>
+                                            Enter Chat →
                                         </button>
-                                    )
-                                )}
-                                
-                                {isMember && <button className="btn btn-sm btn-outline" onClick={() => navigate(`/groups/${g.id}`)}>Enter Chat →</button>}
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })
+                )}
             </div>
         </div>
     );

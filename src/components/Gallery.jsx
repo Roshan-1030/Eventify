@@ -13,14 +13,14 @@ const Gallery = () => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     const folderId = routeFolderId ? (isNaN(Number(routeFolderId)) ? routeFolderId : parseInt(routeFolderId)) : null;
-    const roomFolders = (state.folders || []).filter(f => f.roomId === state.user.roomId);
+    const roomFolders = (state.folders || []).filter(f => f.roomId === state.user?.roomId);
     const currentFolder = folderId ? roomFolders.find(f => String(f.id) === String(folderId)) : null;
     const folderImages = folderId ? (state.gallery || []).filter(g => String(g.folderId) === String(folderId)) : [];
 
     const handleCreateFolder = async () => {
-        const name = prompt("Enter new folder name:");
-        if (name) {
-            const newFolder = { roomId: state.user.roomId, name, createdAt: Date.now() };
+        const name = prompt("Enter new album folder name:");
+        if (name && name.trim()) {
+            const newFolder = { roomId: state.user.roomId, name: name.trim(), createdAt: Date.now() };
             try {
                 await addDoc(collection(db, "folders"), newFolder);
             } catch (e) {
@@ -59,7 +59,7 @@ const Gallery = () => {
                     roomId: state.user.roomId,
                     folderId: folderId,
                     url: compressedBase64,
-                    title: file.name,
+                    title: file.name.replace(/\.[^/.]+$/, ""),
                     uploaderId: state.user.id,
                     createdAt: Date.now()
                 };
@@ -78,52 +78,73 @@ const Gallery = () => {
     };
 
     const handleDeletePhoto = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this photo forever?")) return;
+        if (!window.confirm("Are you sure you want to delete this photo?")) return;
         try {
             await deleteDoc(doc(db, "gallery", String(id)));
         } catch (e) {
-            console.error("Cloud delete photo failed, using local fallback:", e);
+            console.error("Delete photo error:", e);
             setState(prev => ({ ...prev, gallery: prev.gallery.filter(g => String(g.id) !== String(id)) }));
         }
         setIsLightboxOpen(false);
     };
 
+    // Folders Root View
     if (!folderId) {
         return (
             <div className="gallery-folders">
-                <div className="flex justify-between items-center mb-4">
+                <div className="dashboard-header">
                     <div>
-                        <h1>Photo Gallery Folders</h1>
-                        <p>Current Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+                        <h1 style={{ marginBottom: '0.35rem' }}>Photo Gallery</h1>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+                            Albums for Room: <strong style={{ color: 'var(--primary)' }}>{state.user?.roomId}</strong>
+                        </p>
                     </div>
-                    {state.user.role === 'admin' && <button className="btn btn-primary" onClick={handleCreateFolder}>+ Create Folder</button>}
+                    {state.user?.role === 'admin' && (
+                        <button className="btn btn-primary btn-sm" onClick={handleCreateFolder}>
+                            + Create Album
+                        </button>
+                    )}
                 </div>
+
                 <div className="grid-cards mt-4">
                     {roomFolders.length === 0 ? (
-                        <p className="text-secondary">No photo folders in this room yet.</p>
+                        <div className="glass-panel text-center" style={{ padding: '3rem 1.5rem' }}>
+                            <p className="text-secondary" style={{ margin: 0 }}>No photo albums created in this room yet.</p>
+                        </div>
                     ) : (
                         roomFolders.map(f => (
-                            <div key={f.id} className="glass-panel text-center" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => navigate(`/gallery/${f.id}`)}>
-                                {state.user.role === 'admin' && (
-                                    <button className="btn btn-sm btn-outline" style={{ position: 'absolute', top: '10px', right: '10px', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem', zIndex: 10 }} onClick={async (e) => {
-                                        e.stopPropagation();
-                                        if (window.confirm(`Delete folder "${f.name}" and all its photos?`)) {
-                                            try {
-                                                await deleteDoc(doc(db, "folders", String(f.id)));
-                                            } catch (err) {
-                                                console.error("Cloud delete folder error:", err);
+                            <div 
+                                key={f.id} 
+                                className="glass-panel text-center" 
+                                style={{ cursor: 'pointer', position: 'relative', padding: '2rem 1.5rem' }} 
+                                onClick={() => navigate(`/gallery/${f.id}`)}
+                            >
+                                {state.user?.role === 'admin' && (
+                                    <button 
+                                        className="btn btn-xs btn-outline" 
+                                        style={{ position: 'absolute', top: '12px', right: '12px', color: 'var(--danger)', borderColor: 'var(--danger)' }} 
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm(`Delete folder "${f.name}" and all its photos?`)) {
+                                                try {
+                                                    await deleteDoc(doc(db, "folders", String(f.id)));
+                                                } catch (err) { }
+                                                setState(prev => ({
+                                                    ...prev,
+                                                    folders: prev.folders.filter(folder => String(folder.id) !== String(f.id)),
+                                                    gallery: prev.gallery.filter(img => String(img.folderId) !== String(f.id))
+                                                }));
                                             }
-                                            setState(prev => ({
-                                                ...prev,
-                                                folders: prev.folders.filter(folder => String(folder.id) !== String(f.id)),
-                                                gallery: prev.gallery.filter(img => String(img.folderId) !== String(f.id))
-                                            }));
-                                        }
-                                    }}>Delete</button>
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
                                 )}
-                                <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>📁</span>
-                                <h3>{f.name}</h3>
-                                <p>{(state.gallery || []).filter(g => String(g.folderId) === String(f.id)).length} Photos</p>
+                                <span style={{ fontSize: '2.75rem', display: 'block', marginBottom: '0.75rem' }}>📁</span>
+                                <h3 style={{ margin: '0 0 0.25rem 0' }}>{f.name}</h3>
+                                <small className="text-secondary">
+                                    {(state.gallery || []).filter(g => String(g.folderId) === String(f.id)).length} Photos
+                                </small>
                             </div>
                         ))
                     )}
@@ -133,9 +154,9 @@ const Gallery = () => {
     }
 
     if (!currentFolder) return (
-        <div className="text-center p-8">
-            <h1>Folder not found.</h1>
-            <button className="btn btn-primary mt-4" onClick={() => navigate('/gallery')}>Back to Gallery</button>
+        <div className="glass-panel text-center" style={{ padding: '3rem 1.5rem' }}>
+            <h2>Album not found</h2>
+            <button className="btn btn-primary mt-4" onClick={() => navigate('/gallery')}>Back to Albums</button>
         </div>
     );
 
@@ -143,40 +164,90 @@ const Gallery = () => {
 
     return (
         <div className="gallery-view">
-            <div className="flex justify-between items-center mb-4" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="dashboard-header">
                 <div>
-                    <button className="btn btn-outline btn-sm mb-2" onClick={() => navigate('/gallery')} style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>← Back to Folders</button>
-                    <h1>{currentFolder.name}</h1>
+                    <button className="btn btn-outline btn-xs mb-2" onClick={() => navigate('/gallery')}>
+                        ← Back to Albums
+                    </button>
+                    <h1 style={{ marginBottom: '0.25rem' }}>{currentFolder.name}</h1>
+                    <small className="text-secondary">{folderImages.length} photos in this album</small>
                 </div>
-                <div className="flex gap-2">
-                    <button className="btn btn-primary" onClick={() => document.getElementById('gallery-input').click()}>+ Upload Photo</button>
+                <div className="header-actions">
+                    <button className="btn btn-primary btn-sm" onClick={() => document.getElementById('gallery-input').click()}>
+                        + Upload Photo
+                    </button>
                     <input type="file" id="gallery-input" style={{ display: 'none' }} accept="image/*" onChange={handleUpload} />
                 </div>
             </div>
 
-            <div className="gallery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                {folderImages.map((img, idx) => (
-                    <div key={img.id} className="glass-panel gallery-item p-0" style={{ cursor: 'pointer', overflow: 'hidden', position: 'relative', height: '200px' }} onClick={() => { setCurrentImageIndex(idx); setIsLightboxOpen(true); }}>
-                        <img src={img.url} alt={img.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <div className="gallery-overlay" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', color: 'white', padding: '0.5rem', opacity: 0, transition: 'opacity 0.3s' }}>
-                            <h3 style={{ margin: 0, fontSize: '1rem' }}>{img.title}</h3>
+            {folderImages.length === 0 ? (
+                <div className="glass-panel text-center" style={{ padding: '3rem 1.5rem' }}>
+                    <p className="text-secondary" style={{ marginBottom: '1rem' }}>No photos uploaded to this album yet.</p>
+                    <button className="btn btn-primary btn-sm" onClick={() => document.getElementById('gallery-input').click()}>Upload First Photo</button>
+                </div>
+            ) : (
+                <div className="gallery-grid">
+                    {folderImages.map((img, idx) => (
+                        <div 
+                            key={img.id} 
+                            className="glass-panel gallery-item p-0" 
+                            onClick={() => { setCurrentImageIndex(idx); setIsLightboxOpen(true); }}
+                        >
+                            <img src={img.url} alt={img.title} />
+                            <div className="gallery-overlay">
+                                <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#ffffff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                    {img.title}
+                                </h4>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
+            {/* Responsive Lightbox Modal */}
             {isLightboxOpen && currentImg && (
-                <div className="lightbox-modal" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 9999, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                    <button className="btn btn-outline" style={{ position: 'absolute', top: '30px', right: '30px', color: 'white', borderColor: 'white' }} onClick={() => setIsLightboxOpen(false)}>Close ✕</button>
-                    {(state.user.role === 'admin' || currentImg.uploaderId === state.user.id) && (
-                        <button className="btn btn-danger" style={{ position: 'absolute', top: '30px', right: '140px' }} onClick={() => handleDeletePhoto(currentImg.id)}>Delete Photo</button>
+                <div className="lightbox-modal" onClick={() => setIsLightboxOpen(false)}>
+                    <button 
+                        className="btn btn-outline btn-sm" 
+                        style={{ position: 'absolute', top: '20px', right: '20px', color: '#ffffff', borderColor: 'rgba(255,255,255,0.4)', borderRadius: '50%', width: '40px', height: '40px', padding: 0 }} 
+                        onClick={() => setIsLightboxOpen(false)}
+                    >
+                        ✕
+                    </button>
+                    
+                    {(state.user?.role === 'admin' || currentImg.uploaderId === state.user?.id) && (
+                        <button 
+                            className="btn btn-danger btn-xs" 
+                            style={{ position: 'absolute', top: '24px', left: '20px' }} 
+                            onClick={(e) => { e.stopPropagation(); handleDeletePhoto(currentImg.id); }}
+                        >
+                            🗑️ Delete
+                        </button>
                     )}
                     
-                    <button className="btn btn-primary" style={{ position: 'absolute', left: '20px', borderRadius: '50%', width: '60px', height: '60px' }} onClick={() => setCurrentImageIndex((idx) => (idx - 1 + folderImages.length) % folderImages.length)}>❮</button>
-                    <button className="btn btn-primary" style={{ position: 'absolute', right: '20px', borderRadius: '50%', width: '60px', height: '60px' }} onClick={() => setCurrentImageIndex((idx) => (idx + 1) % folderImages.length)}>❯</button>
+                    {folderImages.length > 1 && (
+                        <>
+                            <button 
+                                className="btn btn-primary" 
+                                style={{ position: 'absolute', left: '16px', borderRadius: '50%', width: '46px', height: '46px', padding: 0, fontSize: '1.2rem', zIndex: 10 }} 
+                                onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((idx) => (idx - 1 + folderImages.length) % folderImages.length); }}
+                            >
+                                ❮
+                            </button>
+                            <button 
+                                className="btn btn-primary" 
+                                style={{ position: 'absolute', right: '16px', borderRadius: '50%', width: '46px', height: '46px', padding: 0, fontSize: '1.2rem', zIndex: 10 }} 
+                                onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((idx) => (idx + 1) % folderImages.length); }}
+                            >
+                                ❯
+                            </button>
+                        </>
+                    )}
                     
-                    <img src={currentImg.url} alt={currentImg.title} style={{ maxWidth: '85%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px' }} />
-                    <h2 style={{ color: 'white', marginTop: '2rem' }}>{currentImg.title}</h2>
+                    <img src={currentImg.url} alt={currentImg.title} onClick={e => e.stopPropagation()} />
+                    <h3 style={{ color: '#ffffff', marginTop: '1.25rem', fontSize: '1.1rem', textAlign: 'center' }}>
+                        {currentImg.title}
+                    </h3>
                 </div>
             )}
         </div>

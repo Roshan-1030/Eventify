@@ -1,17 +1,22 @@
-/* Event Feedback Styling */
+/* Event Feedback Responsive Styling */
 .feedback-item {
-    padding: 1.8rem;
+    padding: 1.25rem;
     background: var(--card-bg);
-    border-radius: 24px;
-    margin-bottom: 1.5rem;
-    border: 1.5px solid var(--border);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
     box-shadow: var(--glass-shadow);
 }
 
+@media (min-width: 640px) {
+    .feedback-item {
+        padding: 1.5rem;
+    }
+}
+
 .feedback-item:hover {
-    transform: translateY(-8px) scale(1.01);
-    background: white;
+    transform: translateY(-2px);
     border-color: var(--primary);
     box-shadow: var(--premium-shadow);
 }
@@ -28,12 +33,4 @@
     margin-top: 0.5rem;
     margin-bottom: 0;
     font-size: 0.95rem;
-}
-
-@media (max-width: 768px) {
-    .feedback-item .flex.justify-between {
-        flex-direction: row;
-        align-items: center;
-        gap: 0;
-    }
 }

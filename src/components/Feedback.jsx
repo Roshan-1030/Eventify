@@ -4,11 +4,11 @@ import { db } from '../firebase/firebase';
 import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 const Feedback = () => {
-    const { state, setState } = useAppState();
+    const { state } = useAppState();
     const [content, setContent] = useState('');
     
     const roomFeedbacks = (state.feedbacks || [])
-        .filter(f => f.roomId === state.user.roomId)
+        .filter(f => f.roomId === state.user?.roomId)
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const handleSubmit = async (e) => {
@@ -32,51 +32,70 @@ const Feedback = () => {
 
     return (
         <div className="feedback-page">
-            <h1>Event Feedback</h1>
-            <p>Share your experiences for Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+            <div className="dashboard-header">
+                <div>
+                    <h1 style={{ marginBottom: '0.35rem' }}>Event Feedback</h1>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+                        Reviews and student thoughts for Room: <strong style={{ color: 'var(--primary)' }}>{state.user?.roomId}</strong>
+                    </p>
+                </div>
+            </div>
 
-            <div className="flex gap-4" style={{ flexWrap: 'wrap' }}>
-                <div className="glass-panel flex-1" style={{ minWidth: '300px' }}>
-                    <h2>Submit Feedback</h2>
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group mt-4">
+            <div className="grid grid-2 gap-6">
+                <div className="glass-panel" style={{ padding: '1.5rem', height: 'fit-content' }}>
+                    <h2 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>Submit Feedback</h2>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                        <div className="form-group mb-0">
                             <textarea 
                                 className="form-control" 
                                 rows="4" 
-                                placeholder="Tell us about what you loved or how we can improve..." 
+                                placeholder="Tell us about what you loved or how events can be improved..." 
                                 value={content}
                                 onChange={e => setContent(e.target.value)}
                                 required
                             />
                         </div>
-                        <button type="submit" className="btn btn-primary">Submit Feedback</button>
+                        <button type="submit" className="btn btn-primary w-100 mt-2">Submit Feedback</button>
                     </form>
                 </div>
 
-                <div className="glass-panel flex-1" style={{ minWidth: '300px' }}>
-                    <h2>Recent Feedbacks</h2>
-                    <div className="mt-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                    <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Recent Reviews ({roomFeedbacks.length})</h2>
+                    <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
                         {roomFeedbacks.length === 0 ? (
-                            <p className="text-secondary">No feedback submitted in this room yet.</p>
+                            <p className="text-secondary text-center py-8">No feedback submitted in this room yet.</p>
                         ) : (
-                            roomFeedbacks.map(f => (
-                                    <div key={f.id} className="feedback-item" style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                        <div className="flex justify-between mb-1">
-                                            <strong>{f.author} <span className={`badge badge-${f.role}`} style={{ marginLeft: '8px', fontSize: '0.65rem' }}>{f.role}</span></strong>
+                            <div className="flex flex-col gap-3">
+                                {roomFeedbacks.map(f => (
+                                    <div key={f.id} className="p-3 rounded-lg" style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border)' }}>
+                                        <div className="flex justify-between items-center mb-1.5 flex-wrap gap-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <strong style={{ fontSize: '0.88rem' }}>{f.author}</strong>
+                                                <span className={`badge badge-${f.role}`} style={{ fontSize: '0.62rem' }}>{f.role}</span>
+                                            </div>
                                             <div className="flex items-center gap-2">
-                                                <small className="text-secondary">{new Date(f.date).toLocaleDateString()}</small>
-                                                {state.user.role === 'admin' && (
-                                                    <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem' }} onClick={async () => {
-                                                        if(window.confirm('Delete this feedback?')) {
-                                                            try { await deleteDoc(doc(db, "feedbacks", f.id)); } catch(e) {}
-                                                        }
-                                                    }}>Delete</button>
+                                                <small className="text-secondary" style={{ fontSize: '0.72rem' }}>{new Date(f.date).toLocaleDateString()}</small>
+                                                {state.user?.role === 'admin' && (
+                                                    <button 
+                                                        className="btn btn-xs btn-outline" 
+                                                        style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.35rem', fontSize: '0.65rem' }} 
+                                                        onClick={async () => {
+                                                            if (window.confirm('Delete this feedback review?')) {
+                                                                try { await deleteDoc(doc(db, "feedbacks", f.id)); } catch(e) {}
+                                                            }
+                                                        }}
+                                                    >
+                                                        ✕
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
-                                        <p style={{ margin: 0 }}>{f.content}</p>
+                                        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: '1.5' }}>
+                                            {f.content}
+                                        </p>
                                     </div>
-                            ))
+                                ))}
+                            </div>
                         )}
                     </div>
                 </div>

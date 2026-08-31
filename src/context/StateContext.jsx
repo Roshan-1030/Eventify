@@ -6,23 +6,11 @@ import { collection, onSnapshot } from 'firebase/firestore';
 
 const initialState = {
     user: null,
-    users: [
-        { id: 1, name: 'Admin Account', email: 'admin@college.edu', password: 'admin', role: 'admin', roomId: 'ADM-12345' }
-    ],
-    events: [
-        { id: 1, roomId: 'ADM-12345', title: 'Nebula Tech Fest 2026', date: '2026-04-15', location: 'Main Auditorium', category: 'Technology', desc: 'Experience the future of tech. Hackathons, robotics, and AR/VR showcases.', image: '/assets/images/tech_fest.png', attendees: [] },
-        { id: 2, roomId: 'ADM-12345', title: 'Prism Cultural Night', date: '2026-04-20', location: 'Open Air Theatre', category: 'Cultural', desc: 'A vivid celebration of arts, music, and dance featuring top student performers.', image: '/assets/images/cultural.png', attendees: [] },
-        { id: 3, roomId: 'ADM-12345', title: 'Velocity Sports Meet', date: '2026-04-25', location: 'University Stadium', category: 'Sports', desc: 'Annual track and field events. Show your athleticism under the stadium lights.', image: '/assets/images/sports.png', attendees: [] }
-    ],
+    users: [],
+    events: [],
     feedbacks: [],
-    folders: [
-        { id: 1, roomId: 'ADM-12345', name: 'Main Gallery' }
-    ],
-    gallery: [
-        { id: 1, roomId: 'ADM-12345', folderId: 1, url: '/assets/images/tech_fest.png', title: 'Tech Fest Highlights' },
-        { id: 2, roomId: 'ADM-12345', folderId: 1, url: '/assets/images/cultural.png', title: 'Cultural Dance Off' },
-        { id: 3, roomId: 'ADM-12345', folderId: 1, url: '/assets/images/sports.png', title: 'Athletics Final 100m' }
-    ],
+    folders: [],
+    gallery: [],
     announcements: [],
     chats: [],
     polls: [],
@@ -31,7 +19,7 @@ const initialState = {
     contactInfo: {
         email: 'support@eventify.edu',
         phone: '+91 98765 43210',
-        address: 'Academic Block-A, University Campus, New Delhi',
+        address: 'Academic Block-A, University Campus',
         instagram: '@eventify_official',
         twitter: '@eventify_org'
     },
@@ -48,8 +36,15 @@ export const StateProvider = ({ children }) => {
 
             const parsed = JSON.parse(saved);
             
-            // 🔥 Robust Deep Merge of Initial State (Fixes crashes when adding new fields)
+            // 🔥 Robust Deep Merge of Initial State
             const merged = { ...initialState, ...parsed };
+
+            // Sanitize user object to prevent missing name crashes
+            if (merged.user) {
+                if (!merged.user.name) {
+                    merged.user.name = merged.user.email ? merged.user.email.split('@')[0] : 'User';
+                }
+            }
 
             // Ensure specific arrays remain arrays
             ['announcements', 'chats', 'polls', 'groups', 'payments', 'feedbacks', 'events', 'users'].forEach(key => {
@@ -80,7 +75,6 @@ export const StateProvider = ({ children }) => {
                 });
 
                 setState(prev => {
-                    // If Firestore has items, use items. If Firestore is empty and we have fallback initialState, merge fallback
                     if (items.length === 0 && initialState[key] && initialState[key].length > 0) {
                         return { ...prev, [key]: initialState[key] };
                     }
@@ -112,7 +106,13 @@ export const StateProvider = ({ children }) => {
         }
     }, [state]);
 
-    const login = (user) => setState(prev => ({ ...prev, user }));
+    const login = (user) => {
+        if (user && !user.name) {
+            user.name = user.email ? user.email.split('@')[0] : 'User';
+        }
+        setState(prev => ({ ...prev, user }));
+    };
+
     const logout = () => setState(prev => ({ ...prev, user: null }));
     
     const updateEvents = (newEvents) => setState(prev => ({ ...prev, events: newEvents }));
@@ -133,11 +133,11 @@ export const StateProvider = ({ children }) => {
             login, 
             logout, 
             updateEvents, 
-            updateUsers,
-            addFeedback,
-            addAnnouncement,
-            addChat,
-            toggleTheme
+            updateUsers, 
+            addFeedback, 
+            addAnnouncement, 
+            addChat, 
+            toggleTheme 
         }}>
             {children}
         </StateContext.Provider>

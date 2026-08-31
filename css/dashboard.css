@@ -1,75 +1,82 @@
-/* Dashboard & Tables Styling */
-.table-container {
-    width: 100%;
-    overflow-x: auto;
-    margin-top: 1rem;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th, td {
-    padding: 1.2rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-}
-
-th {
-    color: var(--text-secondary);
-    font-weight: 600;
-}
-
-/* Specific Badge Colors for Roles */
-.badge-admin { 
-    background: var(--primary-gradient); 
-    color: white; 
-    border: none;
-    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
-}
-.badge-student { 
-    background: var(--accent-gradient); 
-    color: white; 
-    border: none;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-.badge-success { 
-    background: linear-gradient(135deg, #10b981, #34d399); 
-    color: white; 
-}
-
-/* Avatar components */
-.avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: var(--dark);
+/* Dashboard Responsive Styles */
+.dashboard-content-wrapper {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    color: white;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: var(--premium-shadow);
+    flex-direction: column;
+    gap: 2.5rem;
 }
 
-.avatar:hover {
-    transform: scale(1.1) rotate(5deg);
-}
-
-.user-profile-sm {
-    padding: 0.25rem 0.5rem;
-    display: flex;
-    align-items: center;
-}
-
-@media (max-width: 768px) {
-    .student-dashboard .flex.justify-between,
-    .admin-dashboard .flex.justify-between:first-child {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+@media (min-width: 768px) {
+    .dashboard-content-wrapper {
+        gap: 3.5rem;
     }
 }
 
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.dashboard-header .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dashboard-header .header-actions {
+        width: 100%;
+    }
+
+    .dashboard-header .header-actions .btn {
+        flex: 1;
+    }
+}
+
+/* Category Filter Chips */
+.category-chips-container {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.category-chips-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Stat Cards */
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1.5rem 1rem !important;
+}
+
+.stat-card .stat-number {
+    font-size: clamp(2rem, 3.5vw, 2.75rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card .stat-label {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}

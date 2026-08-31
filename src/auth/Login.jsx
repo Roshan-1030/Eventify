@@ -35,24 +35,10 @@ const Login = () => {
         setError('');
         setLoading(true);
 
-        // 🔐 ADMIN LOGIN (Firebase Auth with Demo Fast-Track)
+        // 🔐 ADMIN LOGIN (Firebase Auth)
         if (role === 'admin') {
-            // Fast demo login for default admin credentials
-            if (email === 'admin@college.edu' && password === 'admin') {
-                login({
-                    id: 'demo-admin-12345',
-                    name: 'Admin Account',
-                    role: 'admin',
-                    email: 'admin@college.edu',
-                    roomId: 'ADM-12345'
-                });
-                setLoading(false);
-                navigate('/');
-                return;
-            }
-
             try {
-                const userCred = await signInWithEmailAndPassword(auth, email, password);
+                const userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
                 const user = userCred.user;
 
                 // Fetch admin profile from 'profiles' collection
@@ -62,18 +48,18 @@ const Login = () => {
                     const profile = profileDoc.data();
                     login({
                         id: user.uid,
-                        name: profile.name,
-                        role: profile.role,
-                        email: profile.email,
-                        roomId: profile.room_id || profile.roomId
+                        name: profile.name || user.displayName || profile.email?.split('@')[0] || "Admin",
+                        role: profile.role || "admin",
+                        email: profile.email || user.email,
+                        roomId: profile.room_id || profile.roomId || "ADM-GENERAL"
                     });
                     navigate('/');
                 } else {
                     setError("Admin profile not found. Please register as an admin first.");
                 }
             } catch (err) {
-                if (err.code === "auth/invalid-credential") {
-                    setError("Invalid email or password");
+                if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+                    setError("Invalid email or password. Please check your credentials.");
                 } else {
                     setError(err.message.replace("Firebase: ", ""));
                 }
@@ -98,27 +84,15 @@ const Login = () => {
                 const adminSnap = await getDocs(adminQuery);
                 
                 if (adminSnap.empty) {
-                    if (normalizedRoomId === 'ADM-12345') {
-                        // 🌟 Auto-seed default demo admin if not yet present in Firestore
-                        await setDoc(doc(db, "profiles", "demo-admin-12345"), {
-                            id: "demo-admin-12345",
-                            name: "Admin Account",
-                            email: "admin@college.edu",
-                            role: "admin",
-                            room_id: "ADM-12345",
-                            createdAt: new Date()
-                        });
-                    } else {
-                        setError("Invalid Room ID. Please contact your administrator.");
-                        setLoading(false);
-                        return;
-                    }
+                    setError("Invalid Room ID. Please check the code provided by your administrator.");
+                    setLoading(false);
+                    return;
                 }
 
                 // 🔎 Check existing student record in this room
                 const studentQuery = query(
                     collection(db, "profiles"), 
-                    where("email", "==", studentEmail), 
+                    where("email", "==", studentEmail.trim().toLowerCase()), 
                     where("room_id", "==", normalizedRoomId),
                     where("role", "==", "student")
                 );
@@ -129,18 +103,18 @@ const Login = () => {
                     // Update existing student
                     const studentDoc = studentSnap.docs[0];
                     await updateDoc(doc(db, "profiles", studentDoc.id), {
-                        name: studentName,
+                        name: studentName.trim(),
                         branch: studentBranch,
                         year: studentYear
                     });
-                    studentData = { id: studentDoc.id, ...studentDoc.data(), name: studentName, branch: studentBranch, year: studentYear };
+                    studentData = { id: studentDoc.id, ...studentDoc.data(), name: studentName.trim(), branch: studentBranch, year: studentYear };
                 } else {
                     // Create new student record
                     const studentId = `STU-${Date.now()}`;
                     studentData = {
                         id: studentId,
-                        name: studentName,
-                        email: studentEmail,
+                        name: studentName.trim(),
+                        email: studentEmail.trim().toLowerCase(),
                         role: "student",
                         room_id: normalizedRoomId,
                         branch: studentBranch,
@@ -152,7 +126,7 @@ const Login = () => {
 
                 login({
                     id: studentData.id,
-                    name: studentData.name,
+                    name: studentData.name || studentName.trim() || "Student",
                     email: studentData.email,
                     branch: studentData.branch,
                     year: studentData.year,
@@ -162,21 +136,7 @@ const Login = () => {
                 navigate('/');
 
             } catch (err) {
-                if (normalizedRoomId === 'ADM-12345') {
-                    // Fallback to local demo student login if cloud encounters network/permission errors
-                    login({
-                        id: `STU-${Date.now()}`,
-                        name: studentName,
-                        email: studentEmail,
-                        branch: studentBranch,
-                        year: studentYear,
-                        role: 'student',
-                        roomId: 'ADM-12345'
-                    });
-                    navigate('/');
-                    return;
-                }
-                setError("Something went wrong. Try again.");
+                setError("Unable to connect to room. Please check your network and try again.");
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -200,10 +160,10 @@ const Login = () => {
                 const profile = profileDoc.data();
                 login({
                     id: user.uid,
-                    name: profile.name,
-                    role: profile.role,
-                    email: profile.email,
-                    roomId: profile.room_id || profile.roomId
+                    name: profile.name || user.displayName || profile.email?.split('@')[0] || "Admin",
+                    role: profile.role || "admin",
+                    email: profile.email || user.email,
+                    roomId: profile.room_id || profile.roomId || "ADM-GENERAL"
                 });
                 navigate('/');
             } else {
@@ -229,36 +189,11 @@ const Login = () => {
         }
     };
 
-    const fillDemoAdmin = () => {
-        setRole('admin');
-        setEmail('admin@college.edu');
-        setPassword('admin');
-    };
-
-    const fillDemoStudent = () => {
-        setRole('student');
-        setRoomId('ADM-12345');
-        setStudentName('Alex Mercer');
-        setStudentEmail('alex@college.edu');
-        setStudentBranch('CSE');
-        setStudentYear('3rd');
-    };
-
     return (
         <div className="auth-page-wrapper flex items-center justify-center w-100" style={{ minHeight: '100vh', background: 'var(--bg-main)' }}>
-            <div className="glass-panel login-container text-center" style={{ maxWidth: '450px', width: '90%' }}>
+            <div className="glass-panel login-container text-center" style={{ maxWidth: '450px', width: '100%' }}>
                 <h1 className="logo mb-2">Eventify</h1>
                 <p className="mb-4">Welcome back! Access your event room.</p>
-
-                {/* Quick Demo Credentials Bar */}
-                <div className="flex gap-2 justify-center mb-4 flex-wrap">
-                    <button type="button" className="badge badge-admin" style={{ cursor: 'pointer', border: 'none', padding: '0.35rem 0.75rem', fontSize: '0.7rem' }} onClick={fillDemoAdmin}>
-                        ⚡ Demo Admin Autofill
-                    </button>
-                    <button type="button" className="badge badge-student" style={{ cursor: 'pointer', border: 'none', padding: '0.35rem 0.75rem', fontSize: '0.7rem' }} onClick={fillDemoStudent}>
-                        🎓 Demo Student Autofill
-                    </button>
-                </div>
 
                 {error && <div className="p-3 mb-4 rounded-lg bg-danger text-white font-bold" style={{ fontSize: '0.85rem' }}>{error}</div>}
 
@@ -275,11 +210,11 @@ const Login = () => {
                         <div className="flex flex-col gap-2">
                             <div className="form-group" style={{ textAlign: 'left' }}>
                                 <label style={{ fontWeight: 700 }}>Email ID</label>
-                                <input type="email" className="form-control" value={email} onChange={e => setEmail(e.target.value)} required />
+                                <input type="email" className="form-control" placeholder="admin@college.edu" value={email} onChange={e => setEmail(e.target.value)} required />
                             </div>
                             <div className="form-group" style={{ textAlign: 'left', position: 'relative' }}>
                                 <label style={{ fontWeight: 700 }}>Password</label>
-                                <input type={showPassword ? "text" : "password"} className="form-control" value={password} onChange={e => setPassword(e.target.value)} required style={{ paddingRight: '2.5rem' }} />
+                                <input type={showPassword ? "text" : "password"} className="form-control" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={{ paddingRight: '2.75rem' }} />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '10px', bottom: '10px', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, display: 'flex', color: 'var(--text-primary)' }}>
                                     {showPassword ? (
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>

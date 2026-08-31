@@ -8,92 +8,87 @@ const TicketPage = () => {
     const { state } = useAppState();
     const navigate = useNavigate();
 
-    const payment = state.payments.find(p => String(p.id) === String(paymentId));
-    const event = state.events.find(e => String(e.id) === String(payment?.eventId));
+    const payment = (state.payments || []).find(p => String(p.id) === String(paymentId));
+    const event = (state.events || []).find(e => String(e.id) === String(payment?.eventId));
 
     if (!payment || !event) {
         return (
-            <div className="glass-panel text-center">
+            <div className="glass-panel text-center" style={{ padding: '3rem 1.5rem', maxWidth: '500px', margin: '2rem auto' }}>
                 <h2>Ticket Not Found</h2>
+                <p className="text-secondary">We couldn't locate this pass. It may have been modified or removed.</p>
                 <button className="btn btn-primary mt-4" onClick={() => navigate('/')}>Back Home</button>
             </div>
         );
     }
 
     return (
-        <div className="ticket-page-container flex flex-col items-center justify-center" style={{ minHeight: '80vh', padding: '2rem' }}>
-            <div className="mb-6 flex w-100 justify-start" style={{ maxWidth: '750px' }}>
-                <button className="btn btn-outline" onClick={() => navigate(-1)}>← Back</button>
+        <div className="ticket-page-container flex flex-col items-center justify-center" style={{ minHeight: '80vh', padding: '1rem 0.5rem' }}>
+            <div className="mb-4 flex w-100 justify-start" style={{ maxWidth: '780px' }}>
+                <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)} style={{ borderRadius: 'var(--radius-sm)' }}>
+                    ← Back
+                </button>
             </div>
 
             <div className="ticket-premium-pass glass-panel" style={{ 
                 padding: 0, 
                 width: '100%', 
-                maxWidth: '750px', 
+                maxWidth: '780px', 
                 overflow: 'hidden', 
                 border: 'none',
                 boxShadow: 'var(--premium-shadow)',
                 position: 'relative',
                 background: 'var(--card-bg)',
-                animation: 'slideIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                borderRadius: '24px'
             }}>
-                {/* Visual Accent */}
-                <div style={{ 
-                    position: 'absolute', 
-                    top: '-10%', 
-                    left: '-10%', 
-                    width: '40%', 
-                    height: '40%', 
-                    background: 'var(--primary)', 
-                    filter: 'blur(100px)', 
-                    opacity: 0.2,
-                    zIndex: 0
-                }}></div>
-
-                <div className="ticket-layout" style={{ zIndex: 1, position: 'relative' }}>
+                <div className="ticket-layout" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
                     {/* Event Banner Section */}
                     <div className="ticket-main-section" style={{ 
-                        flex: 1.6, 
-                        background: `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.85)), url(${event.image})`, 
+                        flex: '1 1 340px', 
+                        background: `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.88)), url(${event.image})`, 
                         backgroundSize: 'cover', 
                         backgroundPosition: 'center',
                         color: 'white',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        padding: 'clamp(1.5rem, 3vw, 2.5rem)',
+                        minHeight: '340px'
                     }}>
                         <div>
-                            <h1 style={{ color: 'white', margin: '0 0 1rem 0', textShadow: '0 4px 15px rgba(0,0,0,0.6)', lineHeight: 1.1 }}>{event.title}</h1>
+                            <span className="badge badge-success mb-2" style={{ fontSize: '0.7rem' }}>OFFICIAL EVENT PASS</span>
+                            <h1 style={{ color: '#ffffff', margin: '0.25rem 0 1rem 0', textShadow: '0 4px 15px rgba(0,0,0,0.6)', lineHeight: 1.15, fontSize: 'clamp(1.4rem, 3vw, 2.2rem)' }}>
+                                {event.title}
+                            </h1>
                             
-                            <div className="ticket-meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem', marginTop: '2.5rem' }}>
-                                <div className="meta-item">
-                                    <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 700, fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Date</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>{event.date}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
+                                <div>
+                                    <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, fontSize: '0.68rem', display: 'block', marginBottom: '2px' }}>Date</small>
+                                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff' }}>{event.date}</div>
                                 </div>
-                                <div className="meta-item">
-                                    <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 700, fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Time</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>{event.time || '10:00 AM'}</div>
+                                <div>
+                                    <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, fontSize: '0.68rem', display: 'block', marginBottom: '2px' }}>Time</small>
+                                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff' }}>{event.time || '10:00 AM'}</div>
                                 </div>
-                                <div className="meta-item" style={{ gridColumn: 'span 2' }}>
-                                    <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 700, fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Venue Address</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>{event.location || 'College Main Campus'}</div>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, fontSize: '0.68rem', display: 'block', marginBottom: '2px' }}>Venue</small>
+                                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff' }}>{event.location || 'College Campus'}</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px dashed rgba(255,255,255,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '2px dashed rgba(255,255,255,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.5rem' }}>
                             <div>
-                                <small style={{ opacity: 0.7, textTransform: 'uppercase' }}>Attendee</small>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white' }}>{payment.userName}</div>
+                                <small style={{ opacity: 0.7, textTransform: 'uppercase', fontSize: '0.68rem' }}>Attendee</small>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#ffffff' }}>{payment.userName}</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <small style={{ opacity: 0.7, textTransform: 'uppercase' }}>Entry Status</small>
+                                <small style={{ opacity: 0.7, textTransform: 'uppercase', fontSize: '0.68rem' }}>Status</small>
                                 {payment.scanned ? (
-                                    <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span style={{ fontSize: '1.5rem' }}>✓</span> VERIFIED ENTRY
+                                    <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.95rem' }}>
+                                        ✓ ADMITTED
                                     </div>
                                 ) : (
-                                    <div style={{ fontWeight: 800, color: '#FFD700' }}>READY FOR SCAN</div>
+                                    <div style={{ fontWeight: 800, color: '#facc15', fontSize: '0.95rem' }}>READY FOR SCAN</div>
                                 )}
                             </div>
                         </div>
@@ -101,112 +96,76 @@ const TicketPage = () => {
 
                     {/* QR Verification Section */}
                     <div className="ticket-qr-section" style={{ 
-                        flex: 1, 
+                        flex: '1 1 260px', 
                         background: 'var(--card-bg)', 
                         display: 'flex', 
                         flexDirection: 'column', 
                         alignItems: 'center', 
                         justifyContent: 'center',
                         position: 'relative',
-                        overflow: 'hidden'
+                        padding: 'clamp(1.5rem, 3vw, 2.5rem)',
+                        borderLeft: '2px dashed var(--border)'
                     }}>
-                        {/* Verified Stamp Overlay */}
                         {payment.scanned && (
                             <div style={{ 
                                 position: 'absolute', 
-                                top: '50%', 
-                                left: '50%', 
-                                transform: 'translate(-50%, -50%) rotate(-25deg)',
-                                border: '8px solid rgba(16, 185, 129, 0.4)',
-                                color: 'rgba(16, 185, 129, 0.4)',
-                                padding: '1rem 2rem',
-                                borderRadius: '15px',
-                                fontSize: '4rem',
-                                fontWeight: 900,
-                                letterSpacing: '8px',
-                                zIndex: 5,
-                                pointerEvents: 'none',
-                                textTransform: 'uppercase',
-                                filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.2))'
-                            }}>
-                                VERIFIED
-                            </div>
-                        )}
-
-                        {payment.scanned && (
-                            <div style={{ 
-                                position: 'absolute', 
-                                top: '1.5rem', 
-                                right: '1.5rem', 
+                                top: '1rem', 
+                                right: '1rem', 
                                 background: '#10B981', 
                                 color: 'white', 
-                                padding: '0.4rem 1rem', 
+                                padding: '0.25rem 0.75rem', 
                                 borderRadius: '30px', 
-                                fontSize: '0.75rem', 
-                                fontWeight: 900, 
-                                zIndex: 10,
-                                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
-                                animation: 'fadeIn 0.6s ease'
+                                fontSize: '0.7rem', 
+                                fontWeight: 900
                             }}>
-                                ✓ ADMITTED
+                                ✓ VERIFIED
                             </div>
                         )}
 
-                        <div className="qr-container" style={{ 
-                            padding: '1.2rem', 
-                            background: '#fff', 
-                            borderRadius: '24px', 
-                            boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
-                            marginBottom: '2rem',
-                            border: '1px solid #eee',
-                            opacity: payment.scanned ? 0.15 : 1,
-                            filter: payment.scanned ? 'grayscale(1)' : 'none',
-                            transition: 'all 0.4s ease'
+                        <div style={{ 
+                            padding: '1rem', 
+                            background: '#ffffff', 
+                            borderRadius: '16px', 
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+                            marginBottom: '1.25rem',
+                            border: '1px solid #e2e8f0',
+                            opacity: payment.scanned ? 0.25 : 1
                         }}>
-                            <QRCodeSVG value={payment.id} size={180} level="H" includeMargin={true} />
+                            <QRCodeSVG value={payment.id} size={150} level="H" includeMargin={true} />
                         </div>
 
-                        <div className="text-center" style={{ position: 'relative', zIndex: 10 }}>
+                        <div className="text-center">
                             <div style={{ 
                                 color: payment.scanned ? '#10B981' : 'var(--text-secondary)', 
-                                fontSize: '0.8rem', 
-                                letterSpacing: '4px', 
-                                marginBottom: '0.5rem',
-                                fontWeight: 900
+                                fontSize: '0.75rem', 
+                                letterSpacing: '2px', 
+                                marginBottom: '0.35rem',
+                                fontWeight: 800
                             }}>
-                                {payment.scanned ? 'ENTRY RECORDED' : 'SCAN FOR ENTRY'}
+                                {payment.scanned ? 'ENTRY RECORDED' : 'PRESENT AT ENTRANCE'}
                             </div>
-                            {payment.scanned && payment.scannedAt && (
-                                <div style={{ fontSize: '0.75rem', color: '#065f46', marginBottom: '1rem', fontWeight: 600 }}>
-                                    Verified at: {new Date(payment.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </div>
-                            )}
                             <div style={{ 
                                 fontFamily: 'monospace', 
                                 fontWeight: 900, 
-                                fontSize: '1.1rem', 
-                                padding: '0.5rem 1rem',
-                                background: payment.scanned ? 'rgba(16, 185, 129, 0.1)' : '#f8f9fa',
-                                borderRadius: '8px',
-                                color: payment.scanned ? '#065f46' : 'var(--dark)',
-                                border: payment.scanned ? '1px solid rgba(16, 185, 129, 0.2)' : 'none'
-                             }}>
-                                {payment.id.toUpperCase()}
+                                fontSize: '0.95rem', 
+                                padding: '0.35rem 0.75rem', 
+                                background: payment.scanned ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0,0,0,0.04)',
+                                borderRadius: '6px',
+                                color: payment.scanned ? '#065f46' : 'var(--text-primary)',
+                                letterSpacing: '1px'
+                            }}>
+                                {payment.id.slice(0, 16).toUpperCase()}
                             </div>
                         </div>
 
-                        <div className="mt-8 pt-8 border-top w-100 text-center">
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
-                                Official Digital Copy • Secure ID Verified
+                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', width: '100%', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: 0 }}>
+                                Official Pass • Non-Transferable
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <p className="mt-8 text-secondary" style={{ fontSize: '0.85rem', maxWidth: '600px', textAlign: 'center' }}>
-                Please present this digital pass at the venue entrance. This ticket is unique to you and cannot be transferred or reused.
-            </p>
         </div>
     );
 };

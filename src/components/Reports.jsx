@@ -10,9 +10,9 @@ const Reports = () => {
 
     if (state.user?.role !== 'admin') {
         return (
-            <div className="glass-panel text-center p-12">
+            <div className="glass-panel text-center p-8">
                 <h1>Access Denied</h1>
-                <p>Only administrators can view room reports.</p>
+                <p>Only event administrators can view reports.</p>
                 <button className="btn btn-primary mt-4" onClick={() => navigate('/')}>Back to Home</button>
             </div>
         );
@@ -26,7 +26,7 @@ const Reports = () => {
         return { ...s, registeredEvents };
     });
 
-    // Calculate and de-duplicate all room registrations for total counter
+    // Calculate total registrations
     const registrationSet = new Set();
     roomEvents.forEach(e => {
         (e.attendees || []).forEach(a => {
@@ -36,13 +36,11 @@ const Reports = () => {
     const totalRoomRegistrations = registrationSet.size;
 
     const handleRemoveStudent = async (studentId) => {
-        if (!window.confirm('Are you sure you want to remove this student from the room? Their event registrations will also be completely cleared.')) return;
+        if (!window.confirm('Are you sure you want to remove this student from the room? Their event registrations will also be cleared.')) return;
         
         try {
-            // Delete their cloud auth/profile record
             await deleteDoc(doc(db, "profiles", studentId));
             
-            // Clean up their array references inside events
             for (let ev of roomEvents) {
                 const remainingAttendees = (ev.attendees || []).filter(a => String(a.id) !== String(studentId));
                 if (remainingAttendees.length !== (ev.attendees || []).length) {
@@ -50,15 +48,15 @@ const Reports = () => {
                 }
             }
             
-            alert("Student and all associated records have been successfully purged from the room!");
+            alert("Student record removed from this room.");
         } catch(e) {
             console.error("Failed to remove student:", e);
-            alert("Error trying to remove student from server. Check permissions.");
+            alert("Error trying to remove student. Check permissions.");
         }
     };
 
     const handleExportCSV = () => {
-        let csvContent = "data:text/csv;charset=utf-8,Student Name,Email,Branch,Year,Registered Events Count,Events List\n";
+        let csvContent = "data:text/csv;charset=utf-8,Student Name,Email,Branch,Year,Registrations Count,Events List\n";
         studentReport.forEach(s => {
             const eventTitles = s.registeredEvents.map(e => e.title).join("; ");
             const row = `"${s.name}","${s.email || 'N/A'}","${s.branch || 'N/A'}","${s.year || 'N/A'}","${s.registeredEvents.length}","${eventTitles}"`;
@@ -75,118 +73,100 @@ const Reports = () => {
     };
 
     const handleExportPDF = () => {
-        if (typeof window.html2pdf === 'undefined') {
-            alert('PDF library not detected. Loading standard print dialog instead.');
-            window.print();
-            return;
-        }
-        
-        const printContainer = document.createElement('div');
-        printContainer.style.padding = '2rem';
-        printContainer.style.background = '#ffffff';
-        printContainer.style.color = '#0f172a';
-        printContainer.innerHTML = `
-            <h1 style="text-align: center; margin-bottom: 2rem;">Room Report - ${state.user.roomId}</h1>
-            <p style="text-align: center;">Total Students: ${students.length} | Total Registrations: ${totalRoomRegistrations}</p>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 2rem; border: 1px solid #e2e8f0;">
-                <thead>
-                    <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
-                        <th style="padding: 1rem; border: 1px solid #e2e8f0;">Name</th>
-                        <th style="padding: 1rem; border: 1px solid #e2e8f0;">Details</th>
-                        <th style="padding: 1rem; border: 1px solid #e2e8f0;">Events</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${studentReport.map(s => `
-                        <tr>
-                            <td style="padding: 1rem; border: 1px solid #e2e8f0; font-weight: bold;">${s.name}<br><small style="font-weight: normal; color: #64748b;">${s.email}</small></td>
-                            <td style="padding: 1rem; border: 1px solid #e2e8f0;">${s.branch} - ${s.year} Year</td>
-                            <td style="padding: 1rem; border: 1px solid #e2e8f0;">${s.registeredEvents.map(e => e.title).join(', ') || 'None'}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
-        
-        const opt = { 
-            margin: 0.5, 
-            filename: `Report_${state.user.roomId}.pdf`, 
-            image: { type: 'jpeg', quality: 0.98 }, 
-            html2canvas: { scale: 2 }, 
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
-            pagebreak: { mode: ['css', 'legacy'], avoid: 'tr' }
-        };
-        window.html2pdf().set(opt).from(printContainer).save();
+        window.print();
     };
 
     return (
         <div className="reports-page">
-            <div className="flex justify-between items-center mb-6">
+            <div className="dashboard-header">
                 <div>
-                    <h1>Room Registration Report</h1>
-                    <p>High-level overview for Room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+                    <h1 style={{ marginBottom: '0.35rem' }}>Room Report</h1>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+                        Overview for Room: <strong style={{ color: 'var(--primary)' }}>{state.user?.roomId}</strong>
+                    </p>
                 </div>
-                <div className="flex gap-2">
-                    <button className="btn btn-outline" style={{ border: '1px solid var(--primary)', color: 'var(--primary)' }} onClick={handleExportCSV}>📊 Export CSV</button>
-                    <button className="btn btn-primary" onClick={handleExportPDF}>📄 Export PDF</button>
-                </div>
-            </div>
-
-            <div className="grid-cards mb-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                <div className="glass-panel text-center" style={{ border: '2px solid var(--accent)' }}>
-                    <h3 style={{ fontSize: '2.5rem', color: 'var(--accent)', margin: 0 }}>{students.length}</h3>
-                    <p style={{ fontWeight: 'bold' }}>Enrolled Students</p>
-                </div>
-                <div className="glass-panel text-center" style={{ border: '2px solid var(--primary)' }}>
-                    <h3 style={{ fontSize: '2.5rem', color: 'var(--primary)', margin: 0 }}>{totalRoomRegistrations}</h3>
-                    <p style={{ fontWeight: 'bold' }}>Total Event Seats Taken</p>
-                </div>
-                <div className="glass-panel text-center" style={{ border: '2px solid var(--success)' }}>
-                    <h3 style={{ fontSize: '2.5rem', color: 'var(--success)', margin: 0 }}>{roomEvents.length}</h3>
-                    <p style={{ fontWeight: 'bold' }}>Active Events</p>
+                <div className="header-actions">
+                    <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>
+                        📊 Export CSV
+                    </button>
+                    <button className="btn btn-primary btn-sm" onClick={handleExportPDF}>
+                        🖨️ Print / PDF
+                    </button>
                 </div>
             </div>
 
-            <div className="glass-panel">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 style={{ margin: 0 }}>Student Activity Detail</h2>
-                    <p className="text-secondary text-sm">Showing filtered results for current room.</p>
+            {/* Stats Summary Grid */}
+            <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+                <div className="glass-panel stat-card">
+                    <div className="stat-number" style={{ color: 'var(--accent)' }}>{students.length}</div>
+                    <div className="stat-label">Enrolled Students</div>
                 </div>
-                <div className="table-container" style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', minWidth: '800px', textAlign: 'left', borderCollapse: 'collapse' }}>
-                        <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
+                <div className="glass-panel stat-card">
+                    <div className="stat-number" style={{ color: 'var(--primary)' }}>{totalRoomRegistrations}</div>
+                    <div className="stat-label">Total RSVPs</div>
+                </div>
+                <div className="glass-panel stat-card">
+                    <div className="stat-number" style={{ color: 'var(--success)' }}>{roomEvents.length}</div>
+                    <div className="stat-label">Active Events</div>
+                </div>
+            </div>
+
+            {/* Students Activity Table */}
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Enrolled Student Activity</h2>
+                    <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>{studentReport.length} Students</span>
+                </div>
+
+                <div className="table-container">
+                    <table>
+                        <thead>
                             <tr>
-                                <th style={{ padding: '1rem' }}>Student Name</th>
-                                <th style={{ padding: '1rem' }}>Academic Profile</th>
-                                <th style={{ padding: '1rem' }}>Registrations</th>
-                                <th style={{ padding: '1rem' }} className="text-center">Count</th>
-                                <th style={{ padding: '1rem' }} className="text-right">Action</th>
+                                <th>Student</th>
+                                <th>Academic</th>
+                                <th>Events Registered</th>
+                                <th style={{ textAlign: 'center' }}>Total</th>
+                                <th style={{ textAlign: 'right' }}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {studentReport.length === 0 ? (
-                                <tr><td colSpan="5" className="text-center p-12 text-secondary">No active students in this room.</td></tr>
+                                <tr><td colSpan="5" className="text-center p-8 text-secondary">No active students in this room yet.</td></tr>
                             ) : (
                                 studentReport.map(s => (
-                                    <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '1rem' }}>
+                                    <tr key={s.id}>
+                                        <td>
                                             <div style={{ fontWeight: 800 }}>{s.name}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.email}</div>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{s.email}</div>
                                         </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <div style={{ fontWeight: 'bold' }}>{s.branch || 'N/A'}</div>
-                                            <div style={{ fontSize: '0.8rem' }}>{s.year || 'N/A'} Year</div>
+                                        <td>
+                                            <div style={{ fontWeight: 700 }}>{s.branch || 'N/A'}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{s.year ? `${s.year} Year` : 'N/A'}</div>
                                         </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            {s.registeredEvents.length > 0 
-                                                ? <div className="flex gap-1 flex-wrap">{s.registeredEvents.map(e => <span key={e.id} className="badge badge-primary" style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem' }}>{e.title}</span>)}</div>
-                                                : <span className="text-secondary text-sm">No registrations</span>}
+                                        <td>
+                                            {s.registeredEvents.length > 0 ? (
+                                                <div className="flex gap-1 flex-wrap">
+                                                    {s.registeredEvents.map(e => (
+                                                        <span key={e.id} className="badge badge-accent" style={{ fontSize: '0.65rem' }}>
+                                                            {e.title}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-secondary text-xs">No registrations</span>
+                                            )}
                                         </td>
-                                        <td style={{ padding: '1rem' }} className="text-center">
-                                            <span style={{ fontWeight: 800 }}>{s.registeredEvents.length}</span>
+                                        <td style={{ textAlign: 'center', fontWeight: 800 }}>
+                                            {s.registeredEvents.length}
                                         </td>
-                                        <td style={{ padding: '1rem' }} className="text-right">
-                                            <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleRemoveStudent(s.id)}>Remove Student</button>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <button 
+                                                className="btn btn-xs btn-outline" 
+                                                style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} 
+                                                onClick={() => handleRemoveStudent(s.id)}
+                                            >
+                                                Remove
+                                            </button>
                                         </td>
                                     </tr>
                                 ))
