@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase.js';
@@ -6,7 +7,7 @@ import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import EventCard from './EventCard';
 
 const AdminDashboard = () => {
-    const { state } = useAppState();
+    const { state, setState } = useAppState();
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
     const [coordinator, setCoordinator] = useState("");
     const [description, setDescription] = useState("");
     const [imageBase64, setImageBase64] = useState("");
+    const [eventType, setEventType] = useState("free"); // 'free' | 'paid'
     const [fee, setFee] = useState("0");
     const [qrImageBase64, setQrImageBase64] = useState("");
     const [error, setError] = useState("");
@@ -77,10 +79,17 @@ const AdminDashboard = () => {
             return;
         }
 
+        if (eventType === 'paid' && (!fee || Number(fee) <= 0)) {
+            setError("Please specify a valid entry fee greater than 0 for a paid event!");
+            setLoading(false);
+            return;
+        }
+
         try {
             const fallBackImage = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22200%22%20viewBox%3D%220%200%20400%20200%22%3E%3Crect%20fill%3D%22%232a2a35%22%20width%3D%22400%22%20height%3D%22200%22%2F%3E%3Ctext%20fill%3D%22rgba%28255%2C255%2C255%2C0.5%29%22%20font-family%3D%22sans-serif%22%20font-size%3D%2220%22%20dy%3D%2210.5%22%20font-weight%3D%22bold%22%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%3ENo%20Image%20Provided%3C%2Ftext%3E%3C%2Fsvg%3E";
             const optimizedPoster = imageBase64 ? await resizeImage(imageBase64, 800) : fallBackImage;
-            const optimizedQr = qrImageBase64 ? await resizeImage(qrImageBase64, 400) : "";
+            const isPaid = eventType === 'paid' && Number(fee) > 0;
+            const optimizedQr = isPaid && qrImageBase64 ? await resizeImage(qrImageBase64, 400) : "";
 
             const eventData = {
                 title, date, category, time, location, description, 
@@ -91,16 +100,22 @@ const AdminDashboard = () => {
                 roomId: state.user.roomId,
                 attendees: [],
                 registrationOpen: true,
-                fee: fee || "0",
+                isPaid: isPaid,
+                fee: isPaid ? String(fee) : "0",
                 qrUrl: optimizedQr,
                 createdAt: new Date()
             };
 
-            await addDoc(collection(db, "events"), eventData);
+            const docRef = await addDoc(collection(db, "events"), eventData);
+            
+            setState(prev => ({
+                ...prev,
+                events: [{ ...eventData, id: docRef.id, _id: docRef.id }, ...(prev.events || [])]
+            }));
             
             alert("✅ Event Launched Successfully!");
             setTitle(""); setDate(""); setCategory(""); setTime(""); setLocation(""); setCoordinator(""); setDescription(""); setImageBase64("");
-            setFee("0"); setQrImageBase64("");
+            setEventType("free"); setFee("0"); setQrImageBase64("");
             setIsModalOpen(false);
         } catch (err) {
             console.error("Cloud upload error:", err);
@@ -275,90 +290,154 @@ const AdminDashboard = () => {
             </div>
 
             {/* Create Event Modal */}
-            {isModalOpen && (
+            {isModalOpen && createPortal(
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-                    <div className="glass-panel modal-content-panel" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 style={{ margin: 0 }}>Create New Event</h2>
+                    <div 
+                        className="glass-panel modal-content-panel" 
+                        style={{ 
+                            maxWidth: '680px', 
+                            width: '100%', 
+                            maxHeight: '92dvh', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            padding: '1.25rem' 
+                        }} 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-4" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.35rem' }}>Create New Event</h2>
+                                <p className="text-secondary" style={{ margin: 0, fontSize: '0.82rem' }}>Launch an event for room: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId}</strong></p>
+                            </div>
                             <button 
                                 className="btn btn-sm btn-outline" 
                                 onClick={() => setIsModalOpen(false)}
-                                style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0 }}
+                                style={{ borderRadius: '50%', width: '34px', height: '34px', padding: 0 }}
                             >
                                 ✕
                             </button>
                         </div>
 
-                        {error && <div className="p-3 mb-4 rounded-lg bg-danger text-white font-bold" style={{ fontSize: '0.88rem' }}>{error}</div>}
+                        {error && <div className="p-3 mb-3 rounded-lg bg-danger text-white font-bold" style={{ fontSize: '0.85rem' }}>{error}</div>}
                         
-                        <form onSubmit={handleCreateEvent}>
-                            <div className="form-group">
-                                <label>Event Title *</label>
-                                <input type="text" className="form-control" placeholder="e.g. Nebula Hackathon 2026" value={title} onChange={e => setTitle(e.target.value)} required />
-                            </div>
-
-                            <div className="grid grid-2 gap-4">
-                                <div className="form-group">
-                                    <label>Date *</label>
-                                    <input type="date" className="form-control" value={date} onChange={e => setDate(e.target.value)} required />
+                        <form onSubmit={handleCreateEvent} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', paddingRight: '2px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', flex: 1, paddingBottom: '0.75rem' }}>
+                                <div className="form-group mb-0">
+                                    <label>Event Title *</label>
+                                    <input type="text" className="form-control" placeholder="e.g. Nebula Hackathon 2026" value={title} onChange={e => setTitle(e.target.value)} required />
                                 </div>
-                                <div className="form-group">
-                                    <label>Category *</label>
-                                    <input type="text" className="form-control" placeholder="e.g. Technology, Cultural, Sports" value={category} onChange={e => setCategory(e.target.value)} required />
-                                </div>
-                            </div>
 
-                            <div className="grid grid-2 gap-4">
-                                <div className="form-group">
-                                    <label>Time *</label>
-                                    <input type="text" className="form-control" placeholder="e.g. 10:00 AM - 4:00 PM" value={time} onChange={e => setTime(e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>Location / Venue</label>
-                                    <input type="text" className="form-control" placeholder="e.g. Main Auditorium" value={location} onChange={e => setLocation(e.target.value)} />
-                                </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Lead Coordinator *</label>
-                                <input type="text" className="form-control" placeholder="Coordinator Name" value={coordinator} onChange={e => setCoordinator(e.target.value)} required />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Description *</label>
-                                <textarea className="form-control" rows="3" placeholder="Provide event details, schedule, requirements..." value={description} onChange={e => setDescription(e.target.value)} required />
-                            </div>
-                            
-                            <div className="form-group">
-                                <label>Event Poster Image (Optional)</label>
-                                <input type="file" className="form-control" accept="image/*" onChange={handleImageChange} />
-                            </div>
-
-                            <div className="form-group" style={{ padding: '1rem', background: 'rgba(99, 102, 241, 0.05)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--primary)' }}>
-                                <label style={{ color: 'var(--primary)', fontWeight: 800 }}>Payment & Entry Fee</label>
-                                <div className="grid grid-2 gap-4 mt-2">
+                                <div className="grid grid-2 gap-3">
                                     <div className="form-group mb-0">
-                                        <label>Fee in ₹ (0 for free)</label>
-                                        <input type="number" className="form-control" placeholder="0" value={fee} onChange={e => setFee(e.target.value)} min="0" />
+                                        <label>Date *</label>
+                                        <input type="date" className="form-control" value={date} onChange={e => setDate(e.target.value)} required />
                                     </div>
                                     <div className="form-group mb-0">
-                                        <label>Payment QR Code (Optional)</label>
-                                        <input type="file" className="form-control" accept="image/*" onChange={handleQrChange} />
+                                        <label>Category *</label>
+                                        <input type="text" className="form-control" placeholder="e.g. Technology, Cultural, Sports" value={category} onChange={e => setCategory(e.target.value)} required />
                                     </div>
+                                </div>
+
+                                <div className="grid grid-2 gap-3">
+                                    <div className="form-group mb-0">
+                                        <label>Time *</label>
+                                        <input type="text" className="form-control" placeholder="e.g. 10:00 AM - 4:00 PM" value={time} onChange={e => setTime(e.target.value)} required />
+                                    </div>
+                                    <div className="form-group mb-0">
+                                        <label>Location / Venue</label>
+                                        <input type="text" className="form-control" placeholder="e.g. Main Auditorium" value={location} onChange={e => setLocation(e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="form-group mb-0">
+                                    <label>Lead Coordinator *</label>
+                                    <input type="text" className="form-control" placeholder="Coordinator Name" value={coordinator} onChange={e => setCoordinator(e.target.value)} required />
+                                </div>
+
+                                <div className="form-group mb-0">
+                                    <label>Description *</label>
+                                    <textarea className="form-control" rows="3" placeholder="Provide event details, schedule, requirements..." value={description} onChange={e => setDescription(e.target.value)} required />
+                                </div>
+                                
+                                <div className="form-group mb-0">
+                                    <label>Event Poster Image (Optional)</label>
+                                    <input type="file" className="form-control" accept="image/*" onChange={handleImageChange} />
+                                </div>
+
+                                <div className="form-group mb-0" style={{ padding: '0.9rem', background: 'rgba(37, 99, 235, 0.04)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--primary)' }}>
+                                    <label style={{ color: 'var(--primary)', fontWeight: 800, marginBottom: '0.5rem', display: 'block', fontSize: '0.85rem' }}>Event Entry & Payment Type</label>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                                        <button 
+                                            type="button" 
+                                            className={`btn btn-sm ${eventType === 'free' ? 'btn-primary' : 'btn-outline'}`}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 700 }}
+                                            onClick={() => { setEventType('free'); setFee('0'); setQrImageBase64(''); }}
+                                        >
+                                            🟢 Free (No Payment)
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            className={`btn btn-sm ${eventType === 'paid' ? 'btn-primary' : 'btn-outline'}`}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 700 }}
+                                            onClick={() => setEventType('paid')}
+                                        >
+                                            💳 Paid Event
+                                        </button>
+                                    </div>
+
+                                    {eventType === 'free' ? (
+                                        <div className="p-3 rounded text-sm" style={{ background: 'rgba(5, 150, 105, 0.08)', color: 'var(--success)', border: '1px solid rgba(5, 150, 105, 0.25)' }}>
+                                            ✓ <strong>No Payment Required:</strong> Students will see a direct <strong>"Register"</strong> button with no payment or verification steps.
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-2 gap-3 mt-2">
+                                            <div className="form-group mb-0">
+                                                <label>Entry Fee in ₹ *</label>
+                                                <input 
+                                                    type="number" 
+                                                    className="form-control" 
+                                                    placeholder="e.g. 150" 
+                                                    value={fee} 
+                                                    onChange={e => setFee(e.target.value)} 
+                                                    min="1" 
+                                                    required={eventType === 'paid'}
+                                                />
+                                            </div>
+                                            <div className="form-group mb-0">
+                                                <label>Payment QR Code (Optional)</label>
+                                                <input type="file" className="form-control" accept="image/*" onChange={handleQrChange} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 mt-6 flex-wrap">
-                                <button type="submit" className="btn btn-primary" style={{ flex: 2, minWidth: '160px' }} disabled={loading}>
+                            {/* Sticky Action Buttons */}
+                            <div 
+                                style={{ 
+                                    marginTop: 'auto', 
+                                    paddingTop: '0.85rem', 
+                                    borderTop: '1px solid var(--border)', 
+                                    display: 'flex', 
+                                    gap: '0.75rem', 
+                                    background: 'var(--card-bg)',
+                                    position: 'sticky',
+                                    bottom: 0,
+                                    zIndex: 10
+                                }}
+                            >
+                                <button type="submit" className="btn btn-primary" style={{ flex: 2, minHeight: '46px', fontWeight: 800 }} disabled={loading}>
                                     {loading ? "☁️ Launching..." : "🚀 Launch Event"}
                                 </button>
-                                <button type="button" className="btn btn-outline" style={{ flex: 1, minWidth: '100px' }} onClick={() => setIsModalOpen(false)}>
+                                <button type="button" className="btn btn-outline" style={{ flex: 1, minHeight: '46px', fontWeight: 700 }} onClick={() => setIsModalOpen(false)}>
                                     Cancel
                                 </button>
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

@@ -22,6 +22,32 @@ const Payment = () => {
         );
     }
 
+    const isPaidEvent = Boolean(
+        event && 
+        event.isPaid !== false && 
+        event.isPaid !== 'false' && 
+        event.fee && 
+        Number(event.fee) > 0 && 
+        (event.isPaid === true || event.isPaid === 'true' || event.isPaid === undefined)
+    );
+
+    if (!isPaidEvent) {
+        return (
+            <div className="payment-page flex items-center justify-center p-4" style={{ minHeight: '80vh' }}>
+                <div className="glass-panel text-center" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem 1.5rem' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
+                    <h1 style={{ color: 'var(--success)', fontSize: '1.8rem', marginBottom: '0.5rem' }}>Free Event</h1>
+                    <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>
+                        <strong>{event.title}</strong> is free to attend. No payment or verification proof is required!
+                    </p>
+                    <button className="btn btn-primary w-100" onClick={() => navigate(`/event/${event.id}`)}>
+                        ← Back to Event
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const existingPayment = (state.payments || []).find(p => String(p.eventId) === String(event.id) && String(p.userId) === String(state.user?.id));
     if (existingPayment) {
         return (

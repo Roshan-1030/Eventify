@@ -12,9 +12,9 @@ const LandingPage = () => {
         <div style={{ maxWidth: '1080px', margin: '0 auto', paddingTop: '1rem' }}>
             {/* Hero Section */}
             <div className="glass-panel text-center" style={{ padding: 'clamp(2.5rem, 5vw, 4.5rem) clamp(1rem, 3vw, 2.5rem)', marginBottom: '2.5rem', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'var(--primary)', filter: 'blur(100px)', opacity: 0.15 }}></div>
+                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'var(--primary)', filter: 'blur(100px)', opacity: 0.08 }}></div>
                 
-                <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, marginBottom: '1.25rem', background: 'linear-gradient(to right, var(--primary), var(--accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, marginBottom: '1.25rem' }}>
                     Celebrate Every Moment with Eventify
                 </h1>
                 <p className="text-secondary" style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)', maxWidth: '680px', margin: '0 auto 2rem', lineHeight: '1.7' }}>
@@ -30,7 +30,7 @@ const LandingPage = () => {
                     </button>
                 </div>
 
-                <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.25rem', background: 'rgba(99, 102, 241, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.25rem', background: 'rgba(37, 99, 235, 0.04)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                     <h4 style={{ color: 'var(--primary)', marginBottom: '0.35rem', fontSize: '1rem' }}>Our Mission</h4>
                     <p style={{ fontSize: '0.88rem', margin: 0, opacity: 0.85, lineHeight: '1.6' }}>
                         To bridge the gap between campus organizers and students with a seamless, digital-first experience that fosters community and participation.

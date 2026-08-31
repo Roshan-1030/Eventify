@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 
@@ -238,8 +239,8 @@ const Header = () => {
                 </div>
             </div>
 
-            {/* Modern Slide-in Navigation Drawer */}
-            {isNavOpen && (
+            {/* Modern Slide-in Navigation Drawer rendered in portal */}
+            {isNavOpen && createPortal(
                 <>
                     <div className="nav-drawer-backdrop" onClick={closeAll} />
                     <div className="nav-drawer" onClick={e => e.stopPropagation()}>
@@ -258,7 +259,7 @@ const Header = () => {
                         </div>
 
                         {state.user && (
-                            <div style={{ padding: '0.75rem', background: 'rgba(99, 102, 241, 0.08)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+                            <div style={{ padding: '0.75rem', background: 'rgba(37, 99, 235, 0.05)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', border: '1px solid rgba(37, 99, 235, 0.15)' }}>
                                 <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{userName}</div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                                     Room ID: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId || 'N/A'}</strong>
@@ -336,7 +337,8 @@ const Header = () => {
                             )}
                         </div>
                     </div>
-                </>
+                </>,
+                document.body
             )}
         </header>
     );

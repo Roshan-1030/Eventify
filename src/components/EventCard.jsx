@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
@@ -19,6 +20,14 @@ const EventCard = ({ event }) => {
 
     const isRegistered = (event.attendees || []).some(a => String(a.id) === String(state.user?.id));
     const isAdmin = state.user?.role === 'admin';
+    const isPaidEvent = Boolean(
+        event && 
+        event.isPaid !== false && 
+        event.isPaid !== 'false' && 
+        event.fee && 
+        Number(event.fee) > 0 && 
+        (event.isPaid === true || event.isPaid === 'true' || event.isPaid === undefined)
+    );
     const eventPayments = (state.payments || []).filter(p => String(p.eventId) === String(event.id));
     const scannedPayments = eventPayments.filter(p => p.scanned);
     
@@ -123,17 +132,41 @@ const EventCard = ({ event }) => {
         }
     };
 
+    const handleOpenEditModal = () => {
+        setEditData({
+            ...event,
+            title: event.title || '',
+            date: event.date || '',
+            description: event.description || event.desc || '',
+            isPaid: isPaidEvent,
+            fee: event.fee && Number(event.fee) > 0 ? String(event.fee) : '50',
+            qrUrl: event.qrUrl || '',
+            image: event.image || ''
+        });
+        setShowEditModal(true);
+    };
+
     const handleEditSave = async (e) => {
         e.preventDefault();
         try {
-            await updateDoc(doc(db, "events", event.id), {
+            const isPaid = Boolean(editData.isPaid === true || (editData.fee && Number(editData.fee) > 0));
+            const updatedFields = {
                 title: editData.title,
                 date: editData.date,
                 description: editData.description,
-                qrUrl: editData.qrUrl || "",
+                desc: editData.description,
+                isPaid: isPaid,
+                fee: isPaid ? String(editData.fee || "0") : "0",
+                qrUrl: isPaid ? (editData.qrUrl || "") : "",
                 image: editData.image || event.image
-            });
+            };
+            await updateDoc(doc(db, "events", event.id), updatedFields);
+            setState(prev => ({
+                ...prev,
+                events: prev.events.map(ev => String(ev.id) === String(event.id) ? { ...ev, ...updatedFields } : ev)
+            }));
             setShowEditModal(false);
+            alert("✅ Event Updated Successfully!");
         } catch(err) {
             console.error("Failed to update event details:", err);
             alert("Failed to save changes.");
@@ -166,6 +199,32 @@ const EventCard = ({ event }) => {
         }
     };
 
+    const handleEditQrChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxWidth = 500;
+                    const scale = maxWidth / img.width;
+                    if (scale >= 1) {
+                        setEditData(prev => ({ ...prev, qrUrl: reader.result }));
+                        return;
+                    }
+                    canvas.width = maxWidth;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    setEditData(prev => ({ ...prev, qrUrl: canvas.toDataURL('image/jpeg', 0.8) }));
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const studentPayment = eventPayments.find(p => String(p.userId) === String(state.user?.id));
 
     return (
@@ -192,8 +251,10 @@ const EventCard = ({ event }) => {
                 <h3>{event.title}</h3>
                 <div className="event-location">
                     <span>📍 {event.location || 'College Campus'}</span>
-                    {event.fee && Number(event.fee) > 0 && (
+                    {isPaidEvent ? (
                         <span className="badge badge-accent" style={{ marginLeft: 'auto', fontSize: '0.7rem' }}>₹{event.fee}</span>
+                    ) : (
+                        <span className="badge badge-outline" style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--success)', borderColor: 'var(--success)' }}>Free</span>
                     )}
                 </div>
                 <p className="event-description text-truncate" style={{ height: '3.4rem' }}>
@@ -209,10 +270,22 @@ const EventCard = ({ event }) => {
                         <>
                             {isRegistered ? (
                                 <>
-                                    {studentPayment?.ticketIssued ? (
-                                        <button className="btn btn-success btn-sm" onClick={() => navigate(`/ticket/${studentPayment.id}`)}>
-                                            🎫 Ticket
-                                        </button>
+                                    {isPaidEvent ? (
+                                        <>
+                                            {studentPayment?.ticketIssued ? (
+                                                <button className="btn btn-success btn-sm" onClick={() => navigate(`/ticket/${studentPayment.id}`)}>
+                                                    🎫 Ticket
+                                                </button>
+                                            ) : studentPayment ? (
+                                                <button className="btn btn-outline btn-sm" style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }} onClick={() => navigate(`/payment/${event.id}`)}>
+                                                    ⏳ Verifying
+                                                </button>
+                                            ) : (
+                                                <button className="btn btn-success btn-sm" onClick={() => navigate(`/payment/${event.id}`)}>
+                                                    💳 Pay ₹{event.fee}
+                                                </button>
+                                            )}
+                                        </>
                                     ) : (
                                         <button className="btn btn-outline btn-sm disabled" disabled>
                                             Registered ✅
@@ -227,7 +300,7 @@ const EventCard = ({ event }) => {
                         </>
                     )}
 
-                    {isAdmin && (
+                    {isAdmin && isPaidEvent && (
                         <button className="btn btn-primary btn-sm" onClick={() => setShowPayments(true)}>
                             💸 Payments ({eventPayments.length})
                         </button>
@@ -242,12 +315,14 @@ const EventCard = ({ event }) => {
                         <button className="btn btn-xs btn-outline admin-btn" onClick={() => setShowAttendees(true)}>
                             👥 {uniqueAttendees.length} RSVPs
                         </button>
-                        <button className="btn btn-xs btn-outline admin-btn" onClick={() => setShowEditModal(true)}>
+                        <button className="btn btn-xs btn-outline admin-btn" onClick={handleOpenEditModal}>
                             ✏️ Edit
                         </button>
-                        <button className="btn btn-xs btn-success admin-btn" onClick={() => setShowScanner(true)}>
-                            📷 Scanner
-                        </button>
+                        {isPaidEvent && (
+                            <button className="btn btn-xs btn-success admin-btn" onClick={() => setShowScanner(true)}>
+                                📷 Scanner
+                            </button>
+                        )}
                         <button className="btn btn-xs btn-outline admin-btn" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDeleteEvent}>
                             🗑️ Delete
                         </button>
@@ -256,7 +331,7 @@ const EventCard = ({ event }) => {
             </div>
 
             {/* Attendees Modal */}
-            {showAttendees && (
+            {showAttendees && createPortal(
                 <div className="modal-overlay" onClick={() => setShowAttendees(false)}>
                     <div className="glass-panel modal-content-panel" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
@@ -276,11 +351,12 @@ const EventCard = ({ event }) => {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Payments Verification Modal */}
-            {showPayments && (
+            {showPayments && createPortal(
                 <div className="modal-overlay" onClick={() => setShowPayments(false)}>
                     <div className="glass-panel modal-content-panel" style={{ maxWidth: '820px' }} onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
@@ -352,11 +428,12 @@ const EventCard = ({ event }) => {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Ticket Scanner Modal */}
-            {showScanner && (
+            {showScanner && createPortal(
                 <div className="modal-overlay" onClick={() => setShowScanner(false)}>
                     <div className="glass-panel modal-content-panel" style={{ maxWidth: '780px' }} onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
@@ -394,11 +471,12 @@ const EventCard = ({ event }) => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Zoom Modal for Payment Proof */}
-            {selectedScreenshot && (
+            {selectedScreenshot && createPortal(
                 <div className="modal-overlay" style={{ zIndex: 100000 }} onClick={() => setSelectedScreenshot(null)}>
                     <div className="glass-panel text-center modal-content-panel" style={{ maxWidth: '600px', padding: '1.25rem' }} onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-3">
@@ -407,43 +485,161 @@ const EventCard = ({ event }) => {
                         </div>
                         <img src={selectedScreenshot} alt="Payment Proof" style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: '8px' }} />
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Edit Event Modal */}
-            {showEditModal && (
+            {showEditModal && createPortal(
                 <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-                    <div className="glass-panel modal-content-panel" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 style={{ margin: 0 }}>Edit Event</h2>
-                            <button className="btn btn-sm btn-outline" onClick={() => setShowEditModal(false)}>✕</button>
+                    <div 
+                        className="glass-panel modal-content-panel" 
+                        style={{ 
+                            maxWidth: '560px', 
+                            width: '100%', 
+                            maxHeight: '92dvh', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            padding: '1.25rem' 
+                        }} 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-3" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Edit Event</h2>
+                                <p className="text-secondary" style={{ margin: 0, fontSize: '0.8rem' }}>Modify event information & pricing</p>
+                            </div>
+                            <button 
+                                className="btn btn-sm btn-outline" 
+                                style={{ borderRadius: '50%', width: '32px', height: '32px', padding: 0 }} 
+                                onClick={() => setShowEditModal(false)}
+                            >
+                                ✕
+                            </button>
                         </div>
-                        <form onSubmit={handleEditSave} className="flex flex-col gap-3">
-                            <div className="form-group">
-                                <label>Title</label>
-                                <input type="text" className="form-control" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} required />
-                            </div>
-                            <div className="grid grid-2 gap-3">
-                                <div className="form-group">
-                                    <label>Date</label>
-                                    <input type="date" className="form-control" value={editData.date} onChange={e => setEditData({...editData, date: e.target.value})} required />
+
+                        <form onSubmit={handleEditSave} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', paddingRight: '2px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1, paddingBottom: '0.75rem' }}>
+                                <div className="form-group mb-0">
+                                    <label>Event Title</label>
+                                    <input type="text" className="form-control" value={editData.title || ''} onChange={e => setEditData({...editData, title: e.target.value})} required />
                                 </div>
-                                <div className="form-group">
-                                    <label>Replace Poster</label>
-                                    <input type="file" className="form-control" accept="image/*" onChange={handleEditImageChange} />
+                                
+                                <div className="grid grid-2 gap-3">
+                                    <div className="form-group mb-0">
+                                        <label>Date</label>
+                                        <input type="date" className="form-control" value={editData.date || ''} onChange={e => setEditData({...editData, date: e.target.value})} required />
+                                    </div>
+                                    <div className="form-group mb-0">
+                                        <label>Replace Poster</label>
+                                        <input type="file" className="form-control" accept="image/*" onChange={handleEditImageChange} />
+                                    </div>
+                                </div>
+
+                                <div className="form-group mb-0">
+                                    <label>Description</label>
+                                    <textarea className="form-control" rows="3" value={editData.description || ''} onChange={e => setEditData({...editData, description: e.target.value})} required />
+                                </div>
+
+                                <div className="form-group mb-0" style={{ padding: '0.85rem', background: 'rgba(37, 99, 235, 0.04)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--primary)' }}>
+                                    <label style={{ color: 'var(--primary)', fontWeight: 800, marginBottom: '0.4rem', display: 'block', fontSize: '0.85rem' }}>Payment Option</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: editData.isPaid ? '0.75rem' : '0' }}>
+                                        <button 
+                                            type="button" 
+                                            className={`btn btn-xs ${!editData.isPaid ? 'btn-primary' : 'btn-outline'}`}
+                                            onClick={() => setEditData({ ...editData, isPaid: false, fee: '0' })}
+                                        >
+                                            🟢 Free Event
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            className={`btn btn-xs ${editData.isPaid ? 'btn-primary' : 'btn-outline'}`}
+                                            onClick={() => setEditData({ ...editData, isPaid: true, fee: editData.fee && Number(editData.fee) > 0 ? editData.fee : '50' })}
+                                        >
+                                            💳 Paid Event
+                                        </button>
+                                    </div>
+                                    
+                                    {editData.isPaid && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+                                            <div className="form-group mb-0">
+                                                <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>Entry Fee in ₹ *</label>
+                                                <input 
+                                                    type="number" 
+                                                    className="form-control" 
+                                                    placeholder="e.g. 50"
+                                                    value={editData.fee || ''} 
+                                                    onChange={e => setEditData({ ...editData, fee: e.target.value })} 
+                                                    min="1" 
+                                                    required
+                                                />
+                                            </div>
+                                            
+                                            <div className="form-group mb-0">
+                                                <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>Payment QR Code (UPI / Scanner)</label>
+                                                <input 
+                                                    type="file" 
+                                                    className="form-control" 
+                                                    accept="image/*" 
+                                                    onChange={handleEditQrChange} 
+                                                />
+                                                
+                                                {editData.qrUrl ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', padding: '0.5rem', background: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                        <img 
+                                                            src={editData.qrUrl} 
+                                                            alt="Payment QR Preview" 
+                                                            style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border)', background: '#fff' }} 
+                                                        />
+                                                        <div style={{ flex: 1, fontSize: '0.78rem' }}>
+                                                            <strong style={{ color: 'var(--success)' }}>✓ QR Code Attached</strong>
+                                                            <div style={{ color: 'var(--text-secondary)' }}>Students will scan this to pay</div>
+                                                        </div>
+                                                        <button 
+                                                            type="button" 
+                                                            className="btn btn-xs btn-outline" 
+                                                            style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                                                            onClick={() => setEditData(prev => ({ ...prev, qrUrl: '' }))}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-secondary mb-0 mt-1" style={{ fontSize: '0.74rem' }}>
+                                                        ℹ️ Upload UPI QR image so students can pay when registering.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea className="form-control" rows="3" value={editData.description} onChange={e => setEditData({...editData, description: e.target.value})} required />
-                            </div>
-                            <div className="flex gap-2 mt-2">
-                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Changes</button>
-                                <button type="button" className="btn btn-outline" onClick={() => setShowEditModal(false)}>Cancel</button>
+
+                            {/* Prominent, Sticky Action Bar for Mobile & Desktop */}
+                            <div 
+                                style={{ 
+                                    marginTop: 'auto', 
+                                    paddingTop: '0.85rem', 
+                                    borderTop: '1px solid var(--border)', 
+                                    display: 'flex', 
+                                    gap: '0.75rem', 
+                                    background: 'var(--card-bg)',
+                                    position: 'sticky',
+                                    bottom: 0,
+                                    zIndex: 10
+                                }}
+                            >
+                                <button type="submit" className="btn btn-primary" style={{ flex: 2, minHeight: '46px', fontWeight: 800 }}>
+                                    💾 Save Changes
+                                </button>
+                                <button type="button" className="btn btn-outline" style={{ flex: 1, minHeight: '46px', fontWeight: 700 }} onClick={() => setShowEditModal(false)}>
+                                    Cancel
+                                </button>
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

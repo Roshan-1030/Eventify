@@ -11,6 +11,14 @@ const EventDetails = () => {
     
     const event = state.events.find(e => String(e.id) === String(id));
     const isRegistered = (event?.attendees || []).some(a => String(a.id) === String(state.user?.id));
+    const isPaidEvent = Boolean(
+        event && 
+        event.isPaid !== false && 
+        event.isPaid !== 'false' && 
+        event.fee && 
+        Number(event.fee) > 0 && 
+        (event.isPaid === true || event.isPaid === 'true' || event.isPaid === undefined)
+    );
     const existingPayment = (state.payments || []).find(p => String(p.eventId) === String(event?.id) && String(p.userId) === String(state.user?.id));
 
     if (!event) {
@@ -109,7 +117,7 @@ const EventDetails = () => {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-secondary">Entry Fee:</span>
-                                    <strong>{event.fee && Number(event.fee) > 0 ? `₹${event.fee}` : 'Free'}</strong>
+                                    <strong>{isPaidEvent ? `₹${event.fee}` : 'Free'}</strong>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-secondary">RSVPs:</span>
@@ -125,41 +133,52 @@ const EventDetails = () => {
                                         disabled={isRegistered || !event.registrationOpen}
                                         onClick={handleRegister}
                                     >
-                                        {isRegistered ? "Registered ✅" : "Register Now"}
+                                        {isRegistered ? "Registered ✅" : (event.registrationOpen ? "Register Now" : "Registration Closed")}
                                     </button>
                                     
-                                    {!existingPayment && isRegistered && (
-                                        <button 
-                                            className="btn btn-success w-100" 
-                                            onClick={() => navigate(`/payment/${event.id}`)}
-                                        >
-                                            💳 Complete Payment (₹{event.fee || '0'})
-                                        </button>
+                                    {isRegistered && !isPaidEvent && (
+                                        <div className="p-3 rounded-lg text-center" style={{ background: 'rgba(16, 185, 129, 0.08)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: '0.85rem' }}>
+                                            <strong>🎉 Registration Confirmed!</strong>
+                                            <div style={{ fontSize: '0.8rem', marginTop: '2px', opacity: 0.9 }}>No payment required for this event. You're all set!</div>
+                                        </div>
                                     )}
 
-                                    {existingPayment && isRegistered && (
-                                        <div className="mt-2 text-center">
-                                            {existingPayment.ticketIssued ? (
+                                    {isRegistered && isPaidEvent && (
+                                        <>
+                                            {!existingPayment && (
                                                 <button 
-                                                    className="btn btn-primary w-100" 
-                                                    style={{ background: 'var(--success-gradient)' }}
-                                                    onClick={() => navigate(`/ticket/${existingPayment.id}`)}
+                                                    className="btn btn-success w-100" 
+                                                    onClick={() => navigate(`/payment/${event.id}`)}
                                                 >
-                                                    🎫 View Official Pass
+                                                    💳 Complete Payment (₹{event.fee || '0'})
                                                 </button>
-                                            ) : (
-                                                <div className="p-3 rounded-lg text-center" style={{ background: 'var(--accent)', color: '#ffffff', fontSize: '0.85rem' }}>
-                                                    <strong>⏳ Verification in Progress</strong>
-                                                    <div style={{ opacity: 0.9, marginTop: '2px' }}>Admin will verify payment shortly.</div>
+                                            )}
+
+                                            {existingPayment && (
+                                                <div className="text-center">
+                                                    {existingPayment.ticketIssued ? (
+                                                        <button 
+                                                            className="btn btn-primary w-100" 
+                                                            style={{ background: 'var(--success-gradient)' }}
+                                                            onClick={() => navigate(`/ticket/${existingPayment.id}`)}
+                                                        >
+                                                            🎫 View Official Pass
+                                                        </button>
+                                                    ) : (
+                                                        <div className="p-3 rounded-lg text-center" style={{ background: 'var(--accent)', color: '#ffffff', fontSize: '0.85rem' }}>
+                                                            <strong>⏳ Verification in Progress</strong>
+                                                            <div style={{ opacity: 0.9, marginTop: '2px' }}>Admin will verify payment shortly.</div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
-                                        </div>
+                                        </>
                                     )}
                                 </div>
                             )}
 
-                            {/* Admin QR Info */}
-                            {state.user?.role === 'admin' && (
+                            {/* Admin QR Info - Shown only for Paid Events */}
+                            {state.user?.role === 'admin' && isPaidEvent && (
                                 <div className="mt-4 pt-4 border-top">
                                     <h4 style={{ color: 'var(--primary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Payment QR</h4>
                                     <div className="flex items-center gap-3 p-3 rounded" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
