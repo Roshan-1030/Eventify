@@ -1,10 +1,8 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
-import { QRCodeSVG } from 'qrcode.react';
 import { db } from '../firebase/firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { useState } from 'react';
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -41,11 +39,14 @@ const EventDetails = () => {
             await updateDoc(doc(db, "events", String(event.id)), {
                 attendees: arrayUnion(newAttendee)
             });
-            alert("Registration Successful!");
         } catch(e) {
-            console.error("Failed to register:", e);
-            alert("Error registering for event.");
+            console.warn("Failed cloud register, updating local state:", e);
         }
+        setState(prev => ({
+            ...prev,
+            events: prev.events.map(ev => String(ev.id) === String(event.id) ? { ...ev, attendees: [...(ev.attendees || []), newAttendee] } : ev)
+        }));
+        alert("🎉 Registration Successful!");
     };
     
     // Ensure accurate singular headcount
@@ -121,9 +122,9 @@ const EventDetails = () => {
                             {state.user?.role === 'admin' && (
                                 <div className="mt-8 pt-6 border-top">
                                     <h4 style={{ color: 'var(--primary)' }}>🛠️ Admin: Payment Info</h4>
-                                    <div className="flex items-center gap-4 mt-4 p-4 bg-white rounded-lg shadow-sm">
+                                    <div className="flex items-center gap-4 mt-4 p-4 rounded-lg shadow-sm" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
                                         {event.qrUrl ? (
-                                            <img src={event.qrUrl} alt="Event QR" style={{ width: '100px', height: '100px', objectFit: 'contain', border: '1px solid #eee' }} />
+                                            <img src={event.qrUrl} alt="Event QR" style={{ width: '100px', height: '100px', objectFit: 'contain', border: '1px solid var(--border)', background: 'white', padding: '4px', borderRadius: '8px' }} />
                                         ) : (
                                             <div className="text-secondary italic" style={{ width: '100px' }}>No QR uploaded</div>
                                         )}

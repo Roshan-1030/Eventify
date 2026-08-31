@@ -54,17 +54,28 @@ const Header = () => {
     }, []);
 
     const navItems = [
+        // Public links for guests
+        { path: '/', icon: '🏠', text: 'Home', isPublic: true, isGuestOnly: true },
+        { path: '/login', icon: '🔑', text: 'Login', isPublic: true, isGuestOnly: true },
+        { path: '/register', icon: '✨', text: 'Create Room', isPublic: true, isGuestOnly: true },
+        
+        // Logged-in user routes
         { path: '/', icon: '🏠', text: 'Dashboard', isPublic: false },
         { path: '/announcements', icon: '📢', text: 'Announcements', isPublic: false },
         { path: '/polls', icon: '📊', text: 'Polls', isPublic: false },
         { path: '/groups', icon: '👥', text: 'Groups', isPublic: false },
         { path: '/chat', icon: '💬', text: 'Discussion', isPublic: false },
+        { path: '/gallery', icon: '🖼️', text: 'Gallery', isPublic: false },
         { path: '/reports', icon: '📈', text: 'Reports', isPublic: false, isAdminOnly: true },
+        { path: '/#about', icon: 'ℹ️', text: 'About Room', isPublic: false },
+        { path: '/#contact', icon: '📞', text: 'Contact Info', isPublic: false },
+        { path: '/#feedback', icon: '⭐', text: 'Feedback', isPublic: false },
     ];
 
     // Filter nav items based on user role and existence
     const filteredNavItems = navItems.filter(item => {
         if (item.isAdminOnly && state.user?.role !== 'admin') return false;
+        if (item.isGuestOnly && state.user) return false;
         if (!item.isPublic && !state.user) return false;
         return true;
     });

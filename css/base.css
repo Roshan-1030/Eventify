@@ -213,11 +213,56 @@ p {
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.badge-primary { background: var(--primary-gradient); color: white; }
+.badge-accent { background: var(--accent); color: white; }
+.badge-danger { background: var(--danger); color: white; }
+.badge-success { background: var(--success); color: white; }
+
+.btn-xs {
+    padding: 0.2rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    min-height: auto !important;
+    border-radius: 6px !important;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85rem !important;
+    min-height: auto !important;
+    border-radius: 10px !important;
+}
+
+.text-danger { color: var(--danger) !important; }
+.text-success { color: var(--success) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-xs { font-size: 0.75rem !important; }
+.text-sm { font-size: 0.85rem !important; }
 
 .bg-danger { background: var(--danger) !important; color: white !important; }
 .bg-success { background: var(--success) !important; color: white !important; }
-.bg-warning { background: var(--danger) !important; color: white !important; }
+.bg-warning { background: #f59e0b !important; color: white !important; }
+.bg-main { background: var(--bg-main) !important; }
+
+[data-theme='dark'] .btn-outline {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+[data-theme='dark'] .btn-outline:hover {
+    background: var(--accent);
+    color: white;
+}
+
+[data-theme='dark'] table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
 
 /* Base Layout */
 #app { display: flex; min-height: 100vh; }

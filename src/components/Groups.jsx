@@ -114,9 +114,17 @@ const Groups = () => {
         } catch(e) { console.error(e); }
     };
 
+    const formatTime = (t) => {
+        if (!t) return '';
+        if (typeof t === 'string' && (t.includes(':') && (t.includes('AM') || t.includes('PM')))) return t;
+        const d = new Date(t);
+        return isNaN(d.getTime()) ? String(t) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
     if (groupId && currentGroup) {
         const isGlobalAdmin = state.user.role === 'admin';
-        const memberSelf = currentGroup.members.find(m => String(m.id) === String(state.user.id));
+        const membersList = currentGroup.members || [];
+        const memberSelf = membersList.find(m => String(m.id) === String(state.user.id));
         const isGroupAdmin = isGlobalAdmin || memberSelf?.roleInGroup === 'admin' || memberSelf?.roleInGroup === 'co-admin';
         const isMember = !!memberSelf || isGlobalAdmin;
 
@@ -143,6 +151,8 @@ const Groups = () => {
             );
         }
 
+        const messagesList = currentGroup.messages || [];
+
         return (
             <div className="group-details">
                 <div className="flex justify-between items-center mb-6">
@@ -153,7 +163,7 @@ const Groups = () => {
                     </div>
                 </div>
 
-                <div className="grid lg:grid-cols-3 gap-8">
+                <div className="grid grid-3 gap-8">
                     <div className="glass-panel col-span-2 flex flex-col" style={{ height: '70vh', padding: '1.5rem' }}>
                         <div className="flex justify-between items-center pb-4 border-bottom">
                             <h2 style={{ margin: 0 }}>{currentGroup.name}</h2>
@@ -161,21 +171,25 @@ const Groups = () => {
                         </div>
                         
                         <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', margin: '1rem 0', padding: '0.5rem', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                            {currentGroup.messages.map((msg, i) => (
-                                <div key={i} className="mb-4" style={{ 
-                                    borderLeft: msg.userId === state.user.id ? '3px solid var(--primary)' : '3px solid transparent', 
-                                    paddingLeft: '1rem' 
-                                }}>
-                                    <div className="flex items-baseline gap-2 mb-1">
-                                        <strong style={{ fontSize: '0.9rem', color: msg.userId === state.user.id ? 'var(--primary)' : 'inherit', cursor: (isGlobalAdmin && msg.userId !== state.user.id) ? 'pointer' : 'default' }} 
-                                                 onClick={() => isGlobalAdmin && msg.userId !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === msg.userId))}>
-                                            {msg.userId === state.user.id ? 'You' : msg.userName} {(isGlobalAdmin && msg.userId !== state.user.id) && '🔍'}
-                                        </strong>
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', opacity: 0.6 }}>{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            {messagesList.length === 0 ? (
+                                <p className="text-secondary text-center p-8">No messages yet. Say hello to the group!</p>
+                            ) : (
+                                messagesList.map((msg, i) => (
+                                    <div key={i} className="mb-4" style={{ 
+                                        borderLeft: msg.userId === state.user.id ? '3px solid var(--primary)' : '3px solid transparent', 
+                                        paddingLeft: '1rem' 
+                                    }}>
+                                        <div className="flex items-baseline gap-2 mb-1">
+                                            <strong style={{ fontSize: '0.9rem', color: msg.userId === state.user.id ? 'var(--primary)' : 'inherit', cursor: (isGlobalAdmin && msg.userId !== state.user.id) ? 'pointer' : 'default' }} 
+                                                     onClick={() => isGlobalAdmin && msg.userId !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === msg.userId))}>
+                                                {msg.userId === state.user.id ? 'You' : msg.userName} {(isGlobalAdmin && msg.userId !== state.user.id) && '🔍'}
+                                            </strong>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', opacity: 0.6 }}>{formatTime(msg.time)}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>{msg.text}</div>
                                     </div>
-                                    <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>{msg.text}</div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
 
                         {(!currentGroup.isMuted || isGroupAdmin) ? (
@@ -188,13 +202,13 @@ const Groups = () => {
 
                     <div className="flex flex-col gap-6">
                         <div className="glass-panel">
-                            <h3>Participants ({currentGroup.members.length})</h3>
+                            <h3>Participants ({membersList.length})</h3>
                             <div className="mt-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                {currentGroup.members.map(m => (
+                                {membersList.map(m => (
                                     <div key={m.id} className="flex items-start justify-between mb-3 pb-3 border-bottom">
                                         <div className="flex items-center gap-3">
                                             <div className="avatar" style={{ width: '30px', height: '30px', fontSize: '0.7rem', cursor: (isGlobalAdmin && m.id !== state.user.id) ? 'pointer' : 'default' }} onClick={() => isGlobalAdmin && m.id !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === m.id))}>
-                                                {m.name.charAt(0)}
+                                                {m.name ? m.name.charAt(0) : 'U'}
                                             </div>
                                             <div>
                                                 <div style={{ fontWeight: 800, fontSize: '0.8rem' }}>{m.name} {m.roleInGroup === 'admin' && <span className="badge badge-admin ml-1" style={{ fontSize: '0.5rem' }}>Admin</span>} {m.roleInGroup === 'co-admin' && <span className="badge badge-primary ml-1" style={{ fontSize: '0.5rem' }}>Co-Admin</span>}</div>
@@ -213,9 +227,9 @@ const Groups = () => {
 
                         {isGroupAdmin && (currentGroup.requests || []).length > 0 && (
                             <div className="glass-panel text-left">
-                                <h3 style={{ color: 'var(--primary)' }}>Pending Requests ({currentGroup.requests.length})</h3>
+                                <h3 style={{ color: 'var(--primary)' }}>Pending Requests ({(currentGroup.requests || []).length})</h3>
                                 <div className="mt-4 flex flex-col gap-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                    {currentGroup.requests.map(req => (
+                                    {(currentGroup.requests || []).map(req => (
                                         <div key={req.id} className="flex items-center justify-between pb-3 border-bottom">
                                             <div>
                                                 <strong style={{ display: 'block' }}>{req.name}</strong>
@@ -287,7 +301,7 @@ const Groups = () => {
                             <p className="text-truncate" style={{ minHeight: '3rem' }}>{g.description}</p>
                             
                             <div className="mt-4 pt-4 border-top flex justify-between items-center">
-                                <span className="badge badge-primary">{g.members.length} Members</span>
+                                <span className="badge badge-primary">{(g.members || []).length} Members</span>
                                 
                                 {!isMember && state.user?.role === 'student' && (
                                     hasRequested ? (

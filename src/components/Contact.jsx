@@ -49,15 +49,15 @@ const Contact = () => {
                         <div className="glass-panel">
                             <h2 style={{ fontSize: '2rem' }}>Direct Contact</h2>
                             <div className="flex flex-col gap-4 mt-6">
-                                <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-[rgba(99,102,241,0.05)] transition-all">
+                                <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid var(--border)', borderRadius: '14px' }}>
                                     <div style={{ fontSize: '2rem' }}>📧</div>
                                     <div><strong>Email Support</strong><p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{info.email}</p></div>
                                 </div>
-                                <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-[rgba(99,102,241,0.05)] transition-all">
+                                <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid var(--border)', borderRadius: '14px' }}>
                                     <div style={{ fontSize: '2rem' }}>📱</div>
                                     <div><strong>Phone / WhatsApp</strong><p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{info.phone}</p></div>
                                 </div>
-                                <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-[rgba(99,102,241,0.05)] transition-all">
+                                <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid var(--border)', borderRadius: '14px' }}>
                                     <div style={{ fontSize: '2rem' }}>📍</div>
                                     <div><strong>Campus Location</strong><p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{info.address}</p></div>
                                 </div>

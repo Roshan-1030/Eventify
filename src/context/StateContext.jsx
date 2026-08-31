@@ -78,7 +78,14 @@ export const StateProvider = ({ children }) => {
                         roomId: data.roomId || data.room_id // normalization
                     };
                 });
-                setState(prev => ({ ...prev, [key]: items }));
+
+                setState(prev => {
+                    // If Firestore has items, use items. If Firestore is empty and we have fallback initialState, merge fallback
+                    if (items.length === 0 && initialState[key] && initialState[key].length > 0) {
+                        return { ...prev, [key]: initialState[key] };
+                    }
+                    return { ...prev, [key]: items };
+                });
             }, err => console.error(`Sync error on ${colName}:`, err));
             unsubscribes.push(unsub);
         };
@@ -91,6 +98,8 @@ export const StateProvider = ({ children }) => {
         subscribe("groups", "groups");
         subscribe("profiles", "users");
         subscribe("payments", "payments");
+        subscribe("folders", "folders");
+        subscribe("gallery", "gallery");
 
         return () => unsubscribes.forEach(fn => fn());
     }, []);

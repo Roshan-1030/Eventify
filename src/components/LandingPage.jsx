@@ -4,7 +4,7 @@ import { useAppState } from '../context/StateContext';
 
 const LandingPage = () => {
     const navigate = useNavigate();
-    const { state, toggleTheme } = useAppState();
+    const { state } = useAppState();
 
     if (state.user) return null;
 

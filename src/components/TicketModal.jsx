@@ -14,7 +14,7 @@ const TicketModal = ({ event, payment, onClose }) => {
                 border: 'none',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                 position: 'relative',
-                background: 'white'
+                background: 'var(--card-bg)'
             }}>
                 {/* Background Decor */}
                 <div style={{ 
@@ -75,7 +75,7 @@ const TicketModal = ({ event, payment, onClose }) => {
                     <div className="ticket-right" style={{ 
                         flex: 1, 
                         padding: '2.5rem', 
-                        background: 'white', 
+                        background: 'var(--card-bg)', 
                         display: 'flex', 
                         flexDirection: 'column', 
                         alignItems: 'center', 

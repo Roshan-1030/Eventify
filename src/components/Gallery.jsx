@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
+import { db } from '../firebase/firebase';
+import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 const Gallery = () => {
     const { state, setState } = useAppState();
@@ -10,16 +12,22 @@ const Gallery = () => {
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    const folderId = routeFolderId ? parseInt(routeFolderId) : null;
+    const folderId = routeFolderId ? (isNaN(Number(routeFolderId)) ? routeFolderId : parseInt(routeFolderId)) : null;
     const roomFolders = (state.folders || []).filter(f => f.roomId === state.user.roomId);
-    const currentFolder = folderId ? roomFolders.find(f => f.id === folderId) : null;
-    const folderImages = folderId ? (state.gallery || []).filter(g => g.folderId === folderId) : [];
+    const currentFolder = folderId ? roomFolders.find(f => String(f.id) === String(folderId)) : null;
+    const folderImages = folderId ? (state.gallery || []).filter(g => String(g.folderId) === String(folderId)) : [];
 
-    const handleCreateFolder = () => {
+    const handleCreateFolder = async () => {
         const name = prompt("Enter new folder name:");
         if (name) {
-            const newFolder = { id: Date.now(), roomId: state.user.roomId, name };
-            setState(prev => ({ ...prev, folders: [...(prev.folders || []), newFolder] }));
+            const newFolder = { roomId: state.user.roomId, name, createdAt: Date.now() };
+            try {
+                await addDoc(collection(db, "folders"), newFolder);
+            } catch (e) {
+                console.error("Cloud folder upload failed, using local state:", e);
+                const localFolder = { ...newFolder, id: Date.now() };
+                setState(prev => ({ ...prev, folders: [...(prev.folders || []), localFolder] }));
+            }
         }
     };
 
@@ -30,7 +38,7 @@ const Gallery = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const img = new Image();
-            img.onload = () => {
+            img.onload = async () => {
                 const canvas = document.createElement('canvas');
                 const MAX_WIDTH = 800;
                 const MAX_HEIGHT = 800;
@@ -48,24 +56,35 @@ const Gallery = () => {
                 const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
 
                 const newImg = {
-                    id: Date.now(),
                     roomId: state.user.roomId,
                     folderId: folderId,
                     url: compressedBase64,
                     title: file.name,
-                    uploaderId: state.user.id
+                    uploaderId: state.user.id,
+                    createdAt: Date.now()
                 };
 
-                setState(prev => ({ ...prev, gallery: [...(prev.gallery || []), newImg] }));
+                try {
+                    await addDoc(collection(db, "gallery"), newImg);
+                } catch (e) {
+                    console.error("Cloud photo upload failed, using local state:", e);
+                    const localImg = { ...newImg, id: Date.now() };
+                    setState(prev => ({ ...prev, gallery: [...(prev.gallery || []), localImg] }));
+                }
             };
             img.src = event.target.result;
         };
         reader.readAsDataURL(file);
     };
 
-    const handleDeletePhoto = (id) => {
+    const handleDeletePhoto = async (id) => {
         if (!window.confirm("Are you sure you want to delete this photo forever?")) return;
-        setState(prev => ({ ...prev, gallery: prev.gallery.filter(g => g.id !== id) }));
+        try {
+            await deleteDoc(doc(db, "gallery", String(id)));
+        } catch (e) {
+            console.error("Cloud delete photo failed, using local fallback:", e);
+            setState(prev => ({ ...prev, gallery: prev.gallery.filter(g => String(g.id) !== String(id)) }));
+        }
         setIsLightboxOpen(false);
     };
 
@@ -86,20 +105,25 @@ const Gallery = () => {
                         roomFolders.map(f => (
                             <div key={f.id} className="glass-panel text-center" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => navigate(`/gallery/${f.id}`)}>
                                 {state.user.role === 'admin' && (
-                                    <button className="btn btn-sm btn-outline" style={{ position: 'absolute', top: '10px', right: '10px', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem', zIndex: 10 }} onClick={(e) => {
+                                    <button className="btn btn-sm btn-outline" style={{ position: 'absolute', top: '10px', right: '10px', color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.4rem', fontSize: '0.6rem', zIndex: 10 }} onClick={async (e) => {
                                         e.stopPropagation();
                                         if (window.confirm(`Delete folder "${f.name}" and all its photos?`)) {
+                                            try {
+                                                await deleteDoc(doc(db, "folders", String(f.id)));
+                                            } catch (err) {
+                                                console.error("Cloud delete folder error:", err);
+                                            }
                                             setState(prev => ({
                                                 ...prev,
-                                                folders: prev.folders.filter(folder => folder.id !== f.id),
-                                                gallery: prev.gallery.filter(img => img.folderId !== f.id)
+                                                folders: prev.folders.filter(folder => String(folder.id) !== String(f.id)),
+                                                gallery: prev.gallery.filter(img => String(img.folderId) !== String(f.id))
                                             }));
                                         }
                                     }}>Delete</button>
                                 )}
                                 <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>📁</span>
                                 <h3>{f.name}</h3>
-                                <p>{(state.gallery || []).filter(g => g.folderId === f.id).length} Photos</p>
+                                <p>{(state.gallery || []).filter(g => String(g.folderId) === String(f.id)).length} Photos</p>
                             </div>
                         ))
                     )}

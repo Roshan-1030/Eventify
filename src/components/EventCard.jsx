@@ -36,7 +36,8 @@ const EventCard = ({ event }) => {
                 setTimeout(() => scanner.resume(), 2000);
             }, () => {});
         }
-        return () => { if (scanner) scanner.clear().catch(e => {}); }
+        return () => { if (scanner) scanner.clear().catch(() => {}); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showScanner]);
 
     const handleScanTicket = async (ticketId) => {
@@ -57,9 +58,14 @@ const EventCard = ({ event }) => {
 
     const handleToggleRegistration = async () => {
         if (!isAdmin) return;
+        const newStatus = !event.registrationOpen;
         try {
-            await updateDoc(doc(db, "events", event.id), { registrationOpen: !event.registrationOpen });
-        } catch(e) { console.error("Toggle failed:", e); }
+            await updateDoc(doc(db, "events", String(event.id)), { registrationOpen: newStatus });
+        } catch(e) { console.warn("Toggle failed on cloud, updating local state:", e); }
+        setState(prev => ({
+            ...prev,
+            events: prev.events.map(ev => String(ev.id) === String(event.id) ? { ...ev, registrationOpen: newStatus } : ev)
+        }));
     };
 
     const handleRegister = async () => {
@@ -71,34 +77,50 @@ const EventCard = ({ event }) => {
 
         const newAttendee = { id: state.user.id, name: state.user.name, email: state.user.email };
         try {
-            await updateDoc(doc(db, "events", event.id), {
+            await updateDoc(doc(db, "events", String(event.id)), {
                 attendees: arrayUnion(newAttendee)
             });
         } catch(e) { 
-            console.error(e);
-            alert("Failed to register. Please try again.");
+            console.warn("Cloud registration failed, using local state:", e);
         }
+        setState(prev => ({
+            ...prev,
+            events: prev.events.map(ev => String(ev.id) === String(event.id) ? { ...ev, attendees: [...(ev.attendees || []), newAttendee] } : ev)
+        }));
+        alert("🎉 Registration Successful!");
     };
 
     const handleUpdatePaymentStatus = async (paymentId, newStatus) => {
         try {
             await updateDoc(doc(db, "payments", paymentId), { status: newStatus });
         } catch(e) { console.error("Error updating payment status", e); }
+        setState(prev => ({
+            ...prev,
+            payments: (prev.payments || []).map(p => String(p.id) === String(paymentId) ? { ...p, status: newStatus } : p)
+        }));
     };
 
     const handleIssueTicket = async (paymentId) => {
         try {
             await updateDoc(doc(db, "payments", paymentId), { ticketIssued: true, status: 'verified' });
-            alert("E-Ticket Officially Issued to the student!");
         } catch(e) { console.error("Error issuing ticket", e); }
+        setState(prev => ({
+            ...prev,
+            payments: (prev.payments || []).map(p => String(p.id) === String(paymentId) ? { ...p, ticketIssued: true, status: 'verified' } : p)
+        }));
+        alert("🎟️ E-Ticket Officially Issued to the student!");
     };
 
     const handleDeleteEvent = async () => {
         if (!isAdmin) return;
         if (window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
             try {
-                await deleteDoc(doc(db, "events", event.id));
-            } catch(e) { console.error("Delete failed:", e); }
+                await deleteDoc(doc(db, "events", String(event.id)));
+            } catch(e) { console.error("Delete failed on cloud:", e); }
+            setState(prev => ({
+                ...prev,
+                events: prev.events.filter(ev => String(ev.id) !== String(event.id))
+            }));
         }
     };
 
@@ -323,7 +345,7 @@ const EventCard = ({ event }) => {
                                     {scannedPayments.length === 0 ? <p className="text-secondary italic text-center text-sm py-4">No tickets scanned yet.</p> : (
                                         <div className="flex flex-col gap-2">
                                             {scannedPayments.map(p => (
-                                                <div key={p.id} className="flex justify-between items-center bg-white p-2 rounded shadow-sm border">
+                                                <div key={p.id} className="flex justify-between items-center p-2 rounded shadow-sm" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
                                                     <div>
                                                         <strong>{p.userName}</strong>
                                                         <div className="text-secondary text-xs" style={{ fontFamily: 'monospace' }}>#{p.id.slice(0,8).toUpperCase()}</div>

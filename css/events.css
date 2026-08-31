@@ -5,8 +5,10 @@
     display: flex;
     flex-direction: column;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border: 2px solid var(--text-primary);
-    background: white;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: var(--glass-shadow);
     min-height: 520px; /* Ensure consistent tall cards to avoid congestion */
 }
 
@@ -86,7 +88,7 @@
 
 .event-description {
     font-size: 0.95rem;
-    color: #475569;
+    color: var(--text-secondary);
     line-height: 1.6;
     margin: 0;
     margin-bottom: 1.5rem;

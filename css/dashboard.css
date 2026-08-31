@@ -65,9 +65,11 @@ th {
 }
 
 @media (max-width: 768px) {
-    .flex.justify-between {
+    .student-dashboard .flex.justify-between,
+    .admin-dashboard .flex.justify-between:first-child {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
     }
 }
+

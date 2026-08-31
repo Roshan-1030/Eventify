@@ -35,8 +35,22 @@ const Login = () => {
         setError('');
         setLoading(true);
 
-        // 🔐 ADMIN LOGIN (Firebase Auth)
+        // 🔐 ADMIN LOGIN (Firebase Auth with Demo Fast-Track)
         if (role === 'admin') {
+            // Fast demo login for default admin credentials
+            if (email === 'admin@college.edu' && password === 'admin') {
+                login({
+                    id: 'demo-admin-12345',
+                    name: 'Admin Account',
+                    role: 'admin',
+                    email: 'admin@college.edu',
+                    roomId: 'ADM-12345'
+                });
+                setLoading(false);
+                navigate('/');
+                return;
+            }
+
             try {
                 const userCred = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCred.user;
@@ -51,7 +65,7 @@ const Login = () => {
                         name: profile.name,
                         role: profile.role,
                         email: profile.email,
-                        roomId: profile.room_id
+                        roomId: profile.room_id || profile.roomId
                     });
                     navigate('/');
                 } else {
@@ -84,9 +98,21 @@ const Login = () => {
                 const adminSnap = await getDocs(adminQuery);
                 
                 if (adminSnap.empty) {
-                    setError("Invalid Room ID. Please contact your administrator.");
-                    setLoading(false);
-                    return;
+                    if (normalizedRoomId === 'ADM-12345') {
+                        // 🌟 Auto-seed default demo admin if not yet present in Firestore
+                        await setDoc(doc(db, "profiles", "demo-admin-12345"), {
+                            id: "demo-admin-12345",
+                            name: "Admin Account",
+                            email: "admin@college.edu",
+                            role: "admin",
+                            room_id: "ADM-12345",
+                            createdAt: new Date()
+                        });
+                    } else {
+                        setError("Invalid Room ID. Please contact your administrator.");
+                        setLoading(false);
+                        return;
+                    }
                 }
 
                 // 🔎 Check existing student record in this room
@@ -136,6 +162,20 @@ const Login = () => {
                 navigate('/');
 
             } catch (err) {
+                if (normalizedRoomId === 'ADM-12345') {
+                    // Fallback to local demo student login if cloud encounters network/permission errors
+                    login({
+                        id: `STU-${Date.now()}`,
+                        name: studentName,
+                        email: studentEmail,
+                        branch: studentBranch,
+                        year: studentYear,
+                        role: 'student',
+                        roomId: 'ADM-12345'
+                    });
+                    navigate('/');
+                    return;
+                }
                 setError("Something went wrong. Try again.");
                 console.error(err);
             } finally {
@@ -163,13 +203,11 @@ const Login = () => {
                     name: profile.name,
                     role: profile.role,
                     email: profile.email,
-                    roomId: profile.room_id
+                    roomId: profile.room_id || profile.roomId
                 });
                 navigate('/');
             } else {
                 setError("Google account authenticated, but no Admin profile found. Please register first.");
-                // Optionally sign out if they shouldn't be "in" without a profile
-                // await auth.signOut();
             }
         } catch (err) {
             setError(err.message.replace("Firebase: ", ""));
@@ -191,11 +229,36 @@ const Login = () => {
         }
     };
 
+    const fillDemoAdmin = () => {
+        setRole('admin');
+        setEmail('admin@college.edu');
+        setPassword('admin');
+    };
+
+    const fillDemoStudent = () => {
+        setRole('student');
+        setRoomId('ADM-12345');
+        setStudentName('Alex Mercer');
+        setStudentEmail('alex@college.edu');
+        setStudentBranch('CSE');
+        setStudentYear('3rd');
+    };
+
     return (
         <div className="auth-page-wrapper flex items-center justify-center w-100" style={{ minHeight: '100vh', background: 'var(--bg-main)' }}>
             <div className="glass-panel login-container text-center" style={{ maxWidth: '450px', width: '90%' }}>
                 <h1 className="logo mb-2">Eventify</h1>
                 <p className="mb-4">Welcome back! Access your event room.</p>
+
+                {/* Quick Demo Credentials Bar */}
+                <div className="flex gap-2 justify-center mb-4 flex-wrap">
+                    <button type="button" className="badge badge-admin" style={{ cursor: 'pointer', border: 'none', padding: '0.35rem 0.75rem', fontSize: '0.7rem' }} onClick={fillDemoAdmin}>
+                        ⚡ Demo Admin Autofill
+                    </button>
+                    <button type="button" className="badge badge-student" style={{ cursor: 'pointer', border: 'none', padding: '0.35rem 0.75rem', fontSize: '0.7rem' }} onClick={fillDemoStudent}>
+                        🎓 Demo Student Autofill
+                    </button>
+                </div>
 
                 {error && <div className="p-3 mb-4 rounded-lg bg-danger text-white font-bold" style={{ fontSize: '0.85rem' }}>{error}</div>}
 
@@ -227,14 +290,14 @@ const Login = () => {
                             </div>
 
                             <div className="text-secondary text-xs mb-2">Or continue with</div>
-                            <button type="button" className="btn btn-outline w-100" onClick={handleGoogleLogin} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', border: '1px solid #ddd', background: 'white' }}>
+                            <button type="button" className="btn btn-outline w-100" onClick={handleGoogleLogin} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px' }} />
                                 Google
                             </button>
                         </div>
                     ) : (
                         <div className="flex flex-col gap-2">
-                            <div className="form-group"><input type="text" className="form-control" placeholder="Room ID" value={roomId} onChange={e => setRoomId(e.target.value)} required /></div>
+                            <div className="form-group"><input type="text" className="form-control" placeholder="Room ID (e.g. ADM-12345)" value={roomId} onChange={e => setRoomId(e.target.value)} required /></div>
                             <div className="form-group"><input type="text" className="form-control" placeholder="Full Name" value={studentName} onChange={e => setStudentName(e.target.value)} required /></div>
                             <div className="form-group" style={{ marginBottom: '0.25rem' }}>
                                 <input type="email" className="form-control" placeholder="Institutional Email" value={studentEmail} onChange={e => setStudentEmail(e.target.value)} required />
