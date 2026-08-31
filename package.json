@@ -30,7 +30,6 @@
     "vite": "^5.2.0"
   },
   "description": "",
-  "main": "vite.config.js",
   "keywords": [],
   "author": "",
   "license": "ISC"
