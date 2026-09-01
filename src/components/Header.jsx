@@ -200,6 +200,11 @@ const Header = () => {
                                     <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>
                                         <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{userName}</div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{state.user.email || 'No email'}</div>
+                                        {state.user.phone && (
+                                            <div style={{ fontSize: '0.74rem', color: 'var(--success)', marginTop: '2px', fontWeight: 600 }}>
+                                                📱 {state.user.phone}
+                                            </div>
+                                        )}
                                         <div className="mt-2">
                                             <span className="badge badge-admin" style={{ fontSize: '0.65rem' }}>Room: {state.user.roomId || 'N/A'}</span>
                                         </div>
@@ -264,6 +269,11 @@ const Header = () => {
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                                     Room ID: <strong style={{ color: 'var(--primary)' }}>{state.user.roomId || 'N/A'}</strong>
                                 </div>
+                                {state.user.phone && (
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '0.2rem', fontWeight: 600 }}>
+                                        📱 {state.user.phone}
+                                    </div>
+                                )}
                             </div>
                         )}
 

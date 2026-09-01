@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const STATE_KEY = 'eventify_state_react_v1';
 import { db } from '../firebase/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 const initialState = {
     user: null,
@@ -126,6 +126,65 @@ export const StateProvider = ({ children }) => {
         document.documentElement.setAttribute('data-theme', state.theme || 'light');
     }, [state.theme]);
     
+    const [selectedProfileUser, setSelectedProfileUser] = useState(null);
+
+    const openUserProfile = async (userOrIdentifier) => {
+        if (!userOrIdentifier) return;
+
+        let target = null;
+        let identifierStr = '';
+
+        if (typeof userOrIdentifier === 'object') {
+            target = { ...userOrIdentifier };
+            identifierStr = target.id || target.userId || target.email || target.name || '';
+        } else {
+            identifierStr = String(userOrIdentifier).trim();
+            target = { name: identifierStr };
+        }
+
+        // Try matching in state.users (populated via profiles listener)
+        const match = (state.users || []).find(u => 
+            (target.id && String(u.id) === String(target.id)) ||
+            (target.userId && String(u.id) === String(target.userId)) ||
+            (target.email && u.email && u.email.toLowerCase() === target.email.toLowerCase()) ||
+            (target.name && u.name && u.name.toLowerCase() === target.name.toLowerCase()) ||
+            (identifierStr && (String(u.id) === identifierStr || (u.name && u.name.toLowerCase() === identifierStr.toLowerCase()) || (u.email && u.email.toLowerCase() === identifierStr.toLowerCase())))
+        );
+
+        // If current logged-in user is viewing themselves
+        const isSelf = state.user && (
+            (target.id && String(state.user.id) === String(target.id)) ||
+            (target.userId && String(state.user.id) === String(target.userId)) ||
+            (target.email && state.user.email && state.user.email.toLowerCase() === target.email.toLowerCase()) ||
+            (target.name && state.user.name && state.user.name.toLowerCase() === target.name.toLowerCase()) ||
+            (identifierStr && (state.user.id === identifierStr || state.user.name.toLowerCase() === identifierStr.toLowerCase()))
+        );
+
+        const merged = {
+            ...target,
+            ...(match || {}),
+            ...(isSelf ? state.user : {})
+        };
+
+        setSelectedProfileUser(merged);
+
+        // Also attempt a direct fetch from Firestore if missing phone or details and we have an id
+        const lookupId = merged.id || merged.userId;
+        if (lookupId && (!merged.phone || !merged.email)) {
+            try {
+                const snap = await getDoc(doc(db, "profiles", String(lookupId)));
+                if (snap.exists()) {
+                    const fresh = snap.data();
+                    setSelectedProfileUser(prev => prev && (prev.id === lookupId || prev.userId === lookupId) ? { ...prev, ...fresh } : prev);
+                }
+            } catch (e) {
+                console.debug("Background profile fetch:", e);
+            }
+        }
+    };
+
+    const closeUserProfile = () => setSelectedProfileUser(null);
+
     return (
         <StateContext.Provider value={{ 
             state, 
@@ -137,7 +196,10 @@ export const StateProvider = ({ children }) => {
             addFeedback, 
             addAnnouncement, 
             addChat, 
-            toggleTheme 
+            toggleTheme,
+            selectedProfileUser,
+            openUserProfile,
+            closeUserProfile
         }}>
             {children}
         </StateContext.Provider>

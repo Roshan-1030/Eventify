@@ -107,6 +107,7 @@ const Payment = () => {
             eventId: event.id,
             userId: state.user.id,
             userName: state.user.name,
+            userPhone: state.user.phone || '',
             amount: event.fee || '0',
             screenshot,
             status: 'pending',

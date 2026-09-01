@@ -4,7 +4,7 @@ import { db } from '../firebase/firebase';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 
 const Chat = () => {
-    const { state } = useAppState();
+    const { state, openUserProfile } = useAppState();
     const [msg, setMsg] = useState('');
     const chatRef = useRef(null);
 
@@ -87,8 +87,13 @@ const Chat = () => {
                                 }}
                             >
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <strong style={{ fontSize: '0.85rem', color: c.userId === state.user.id ? 'var(--primary)' : 'inherit' }}>
-                                        {c.userId === state.user.id ? 'You' : c.userName}
+                                    <strong 
+                                        className="clickable-user-name" 
+                                        style={{ fontSize: '0.85rem', color: c.userId === state.user.id ? 'var(--primary)' : 'inherit' }}
+                                        onClick={() => openUserProfile({ id: c.userId, name: c.userName })}
+                                        title="Click to view contact profile & phone number"
+                                    >
+                                        {c.userId === state.user.id ? 'You' : c.userName} 👤
                                     </strong>
                                     <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', opacity: 0.7 }}>{c.time}</span>
                                 </div>

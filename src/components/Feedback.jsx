@@ -4,7 +4,7 @@ import { db } from '../firebase/firebase';
 import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 const Feedback = () => {
-    const { state } = useAppState();
+    const { state, openUserProfile } = useAppState();
     const [content, setContent] = useState('');
     
     const roomFeedbacks = (state.feedbacks || [])
@@ -18,6 +18,7 @@ const Feedback = () => {
 
         const newFeedback = {
             roomId: state.user.roomId,
+            userId: state.user.id,
             author: state.user.name,
             role: state.user.role,
             content: text,
@@ -70,7 +71,14 @@ const Feedback = () => {
                                     <div key={f.id} className="p-3 rounded-lg" style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border)' }}>
                                         <div className="flex justify-between items-center mb-1.5 flex-wrap gap-1">
                                             <div className="flex items-center gap-1.5">
-                                                <strong style={{ fontSize: '0.88rem' }}>{f.author}</strong>
+                                                <strong 
+                                                    className="clickable-user-name" 
+                                                    style={{ fontSize: '0.88rem' }}
+                                                    onClick={() => openUserProfile({ id: f.userId, name: f.author, role: f.role })}
+                                                    title="Click to view contact profile & phone number"
+                                                >
+                                                    {f.author} 👤
+                                                </strong>
                                                 <span className={`badge badge-${f.role}`} style={{ fontSize: '0.62rem' }}>{f.role}</span>
                                             </div>
                                             <div className="flex items-center gap-2">

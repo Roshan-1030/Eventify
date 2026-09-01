@@ -4,7 +4,7 @@ import { db } from '../firebase/firebase';
 import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 const Announcements = () => {
-    const { state } = useAppState();
+    const { state, openUserProfile } = useAppState();
     const isStudent = state.user?.role === 'student';
     const roomAnnouncements = (state.announcements || [])
         .filter(a => a.roomId === state.user?.roomId)
@@ -34,6 +34,8 @@ const Announcements = () => {
 
         const newAnn = {
             roomId: state.user.roomId,
+            author: state.user.name,
+            authorId: state.user.id,
             type,
             title: finalTitle,
             message: message.trim(),
@@ -147,6 +149,16 @@ const Announcements = () => {
                                     )}
                                     <small className="text-secondary" style={{ fontSize: '0.75rem' }}>
                                         {new Date(a.date).toLocaleDateString()} at {new Date(a.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {a.author && (
+                                            <span> • Posted by <span 
+                                                className="clickable-user-name" 
+                                                style={{ fontSize: '0.75rem', fontWeight: 700 }}
+                                                onClick={() => openUserProfile({ id: a.authorId, name: a.author })}
+                                                title="Click to view author contact & phone number"
+                                            >
+                                                {a.author} 👤
+                                            </span></span>
+                                        )}
                                     </small>
                                 </div>
                                 {!isStudent && (

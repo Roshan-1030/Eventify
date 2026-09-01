@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase/firebase.js';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -25,8 +25,20 @@ const Register = () => {
             return;
         }
 
+        const normalizedEmail = email.trim().toLowerCase();
+
         try {
-            const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+            // Check if this email is already registered anywhere in profiles
+            const emailQuery = query(collection(db, "profiles"), where("email", "==", normalizedEmail));
+            const emailSnap = await getDocs(emailQuery);
+            if (!emailSnap.empty) {
+                const existing = emailSnap.docs[0].data();
+                setError(`This email is already registered to an existing profile (${existing.name}, role: ${existing.role}). One email can only be used for one profile.`);
+                setLoading(false);
+                return;
+            }
+
+            const userCred = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
             const user = userCred.user;
 
             if (!user) throw new Error("User creation failed");
@@ -42,7 +54,7 @@ const Register = () => {
                 await setDoc(docRef, {
                     id: user.uid,
                     name: name.trim(),
-                    email: email.trim().toLowerCase(),
+                    email: normalizedEmail,
                     role: "admin",
                     room_id: roomId,
                     createdAt: new Date()
@@ -78,6 +90,17 @@ const Register = () => {
             const docRef = doc(db, "profiles", user.uid);
             const docSnap = await getDoc(docRef);
 
+            const normalizedEmail = (user.email || '').trim().toLowerCase();
+            const emailQuery = query(collection(db, "profiles"), where("email", "==", normalizedEmail));
+            const emailSnap = await getDocs(emailQuery);
+
+            if (!emailSnap.empty && emailSnap.docs[0].id !== user.uid) {
+                const existing = emailSnap.docs[0].data();
+                setError(`This Google account is already registered as a ${existing.role} profile (${existing.name}). One email can only be used for one profile.`);
+                setLoading(false);
+                return;
+            }
+
             if (!docSnap.exists()) {
                 const randomStr = Math.floor(10000 + Math.random() * 90000);
                 const roomId = `ADM-${randomStr}`;
@@ -85,7 +108,7 @@ const Register = () => {
                 await setDoc(docRef, {
                     id: user.uid,
                     name: user.displayName || "Admin User",
-                    email: user.email,
+                    email: normalizedEmail,
                     role: "admin",
                     room_id: roomId,
                     createdAt: new Date()
@@ -97,7 +120,11 @@ const Register = () => {
             
             navigate("/login");
         } catch (err) {
-            setError(err.message.replace("Firebase: ", ""));
+            if (err.code === "auth/unauthorized-domain") {
+                setError(`Domain (${window.location.hostname}) is not authorized in Firebase. Please add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+            } else {
+                setError(err.message.replace("Firebase: ", ""));
+            }
         } finally {
             setLoading(false);
         }

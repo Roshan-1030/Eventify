@@ -6,7 +6,7 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 const EventDetails = () => {
     const { id } = useParams();
-    const { state, setState } = useAppState();
+    const { state, setState, openUserProfile } = useAppState();
     const navigate = useNavigate();
     
     const event = state.events.find(e => String(e.id) === String(id));
@@ -105,9 +105,15 @@ const EventDetails = () => {
                             </h3>
                             
                             <div className="flex flex-col gap-2 mb-4" style={{ fontSize: '0.9rem' }}>
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center">
                                     <span className="text-secondary">Lead Coordinator:</span>
-                                    <strong>{event.headCoordinator || 'Admin'}</strong>
+                                    <strong 
+                                        className="clickable-user-name"
+                                        onClick={() => openUserProfile(event.headCoordinator || 'Admin')}
+                                        title="Click to view coordinator profile & phone number"
+                                    >
+                                        {event.headCoordinator || 'Admin'} 📞
+                                    </strong>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-secondary">Registration:</span>

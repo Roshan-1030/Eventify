@@ -784,3 +784,41 @@ th {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
+
+/* Clickable User Name */
+.clickable-user-name {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--primary);
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    padding: 0.1rem 0.4rem;
+    margin: -0.1rem -0.2rem;
+    font-weight: 700;
+}
+
+.clickable-user-name:hover {
+    background: rgba(99, 102, 241, 0.12);
+    text-decoration: underline;
+    transform: translateY(-1px);
+}
+
+.clickable-user-name:active {
+    transform: translateY(0);
+}
+
+/* User Contact Modal */
+.user-contact-modal {
+    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+.contact-card-phone-box {
+    transition: all 0.2s ease;
+}
+
+.contact-card-phone-box:hover {
+    border-color: var(--primary) !important;
+}

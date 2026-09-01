@@ -7,7 +7,7 @@ import { doc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const EventCard = ({ event }) => {
-    const { state, setState } = useAppState();
+    const { state, setState, openUserProfile } = useAppState();
     const navigate = useNavigate();
     const [showAttendees, setShowAttendees] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -344,7 +344,14 @@ const EventCard = ({ event }) => {
                             ) : (
                                 uniqueAttendees.map((student, i) => (
                                     <div key={i} className="flex justify-between items-center p-3 rounded" style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border)' }}>
-                                        <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>{student.name}</div>
+                                        <div 
+                                            className="clickable-user-name"
+                                            style={{ fontWeight: 800, fontSize: '0.9rem' }}
+                                            onClick={() => openUserProfile(student)}
+                                            title="Click to view contact profile & phone number"
+                                        >
+                                            {student.name} 👤
+                                        </div>
                                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{student.email}</div>
                                     </div>
                                 ))
@@ -385,7 +392,13 @@ const EventCard = ({ event }) => {
                                         {eventPayments.map(p => (
                                             <tr key={p.id}>
                                                 <td>
-                                                    <strong>{p.userName}</strong>
+                                                    <strong 
+                                                        className="clickable-user-name"
+                                                        onClick={() => openUserProfile({ id: p.userId, name: p.userName })}
+                                                        title="Click to view contact profile & phone number"
+                                                    >
+                                                        {p.userName} 👤
+                                                    </strong>
                                                 </td>
                                                 <td>₹{p.amount || '0'}</td>
                                                 <td>
@@ -459,7 +472,14 @@ const EventCard = ({ event }) => {
                                             {scannedPayments.map(p => (
                                                 <div key={p.id} className="flex justify-between items-center p-2 rounded" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
                                                     <div>
-                                                        <strong style={{ fontSize: '0.85rem' }}>{p.userName}</strong>
+                                                        <strong 
+                                                            className="clickable-user-name"
+                                                            style={{ fontSize: '0.85rem' }}
+                                                            onClick={() => openUserProfile({ id: p.userId, name: p.userName })}
+                                                            title="Click to view contact profile & phone number"
+                                                        >
+                                                            {p.userName} 👤
+                                                        </strong>
                                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>#{p.id.slice(0,8).toUpperCase()}</div>
                                                     </div>
                                                     <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>PRESENT</span>

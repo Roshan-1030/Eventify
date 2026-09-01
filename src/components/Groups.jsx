@@ -5,7 +5,7 @@ import { db } from '../firebase/firebase';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const Groups = () => {
-    const { state, setState } = useAppState();
+    const { state, setState, openUserProfile } = useAppState();
     const { groupId: routeGroupId } = useParams();
     const navigate = useNavigate();
     
@@ -13,7 +13,6 @@ const Groups = () => {
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDesc, setNewGroupDesc] = useState('');
     const [chatInput, setChatInput] = useState('');
-    const [inspectedUser, setInspectedUser] = useState(null);
     const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'members'
     const chatRef = useRef(null);
 
@@ -225,9 +224,13 @@ const Groups = () => {
                                         padding: '0.4rem 0.75rem'
                                     }}>
                                         <div className="flex items-baseline gap-2 mb-1">
-                                            <strong style={{ fontSize: '0.85rem', color: msg.userId === state.user.id ? 'var(--primary)' : 'inherit', cursor: (isGlobalAdmin && msg.userId !== state.user.id) ? 'pointer' : 'default' }} 
-                                                     onClick={() => isGlobalAdmin && msg.userId !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === msg.userId))}>
-                                                {msg.userId === state.user.id ? 'You' : msg.userName} {(isGlobalAdmin && msg.userId !== state.user.id) && '🔍'}
+                                            <strong 
+                                                className="clickable-user-name" 
+                                                style={{ fontSize: '0.85rem', color: msg.userId === state.user.id ? 'var(--primary)' : 'inherit' }} 
+                                                onClick={() => openUserProfile({ id: msg.userId, name: msg.userName })}
+                                                title="Click to view contact profile & phone number"
+                                            >
+                                                {msg.userId === state.user.id ? 'You' : msg.userName} 👤
                                             </strong>
                                             <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', opacity: 0.7 }}>{formatTime(msg.time)}</span>
                                         </div>
@@ -256,12 +259,22 @@ const Groups = () => {
                                 {membersList.map(m => (
                                     <div key={m.id} className="flex items-center justify-between mb-3 pb-3 border-bottom flex-wrap gap-2">
                                         <div className="flex items-center gap-3">
-                                            <div className="avatar" style={{ width: '34px', height: '34px', fontSize: '0.8rem', cursor: (isGlobalAdmin && m.id !== state.user.id) ? 'pointer' : 'default' }} onClick={() => isGlobalAdmin && m.id !== state.user.id && setInspectedUser((state.users || []).find(u => u.id === m.id))}>
+                                            <div 
+                                                className="avatar" 
+                                                style={{ width: '34px', height: '34px', fontSize: '0.8rem', cursor: 'pointer' }} 
+                                                onClick={() => openUserProfile({ id: m.id, name: m.name, email: m.email })}
+                                                title="Click to view contact profile & phone number"
+                                            >
                                                 {m.name ? m.name.charAt(0) : 'U'}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 800, fontSize: '0.88rem' }}>
-                                                    {m.name} 
+                                                <div 
+                                                    className="clickable-user-name"
+                                                    style={{ fontWeight: 800, fontSize: '0.88rem' }}
+                                                    onClick={() => openUserProfile({ id: m.id, name: m.name, email: m.email })}
+                                                    title="Click to view contact profile & phone number"
+                                                >
+                                                    {m.name} 👤
                                                     {m.roleInGroup === 'admin' && <span className="badge badge-admin" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>Admin</span>} 
                                                     {m.roleInGroup === 'co-admin' && <span className="badge badge-primary" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>Co-Admin</span>}
                                                 </div>
@@ -292,7 +305,13 @@ const Groups = () => {
                                     {(currentGroup.requests || []).map(req => (
                                         <div key={req.id} className="flex items-center justify-between pb-3 border-bottom flex-wrap gap-2">
                                             <div>
-                                                <strong>{req.name}</strong>
+                                                <strong 
+                                                    className="clickable-user-name"
+                                                    onClick={() => openUserProfile({ id: req.id, name: req.name, email: req.email })}
+                                                    title="Click to view contact profile & phone number"
+                                                >
+                                                    {req.name} 👤
+                                                </strong>
                                                 <small className="text-secondary" style={{ display: 'block' }}>{req.email}</small>
                                             </div>
                                             <div className="flex gap-2">
@@ -304,26 +323,6 @@ const Groups = () => {
                                 </div>
                             </div>
                         )}
-                    </div>
-                )}
-
-                {/* Inspect User Profile Modal */}
-                {inspectedUser && (
-                    <div className="modal-overlay" onClick={() => setInspectedUser(null)}>
-                        <div className="glass-panel modal-content-panel" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
-                            <div className="text-center">
-                                <div className="avatar mx-auto mb-4" style={{ width: '70px', height: '70px', fontSize: '1.8rem' }}>
-                                    {inspectedUser.name ? inspectedUser.name.charAt(0) : 'U'}
-                                </div>
-                                <h2 style={{ marginBottom: '0.25rem' }}>{inspectedUser.name}</h2>
-                                <span className="badge badge-primary">{inspectedUser.role ? inspectedUser.role.toUpperCase() : 'STUDENT'}</span>
-                                <div className="text-left mt-6 flex flex-col gap-2" style={{ fontSize: '0.9rem' }}>
-                                    <div><strong>Email:</strong> {inspectedUser.email}</div>
-                                    <div><strong>Academic:</strong> {inspectedUser.branch || 'N/A'} - {inspectedUser.year || 'N/A'}</div>
-                                </div>
-                                <button className="btn btn-primary w-100 mt-6" onClick={() => setInspectedUser(null)}>Dismiss</button>
-                            </div>
-                        </div>
                     </div>
                 )}
             </div>

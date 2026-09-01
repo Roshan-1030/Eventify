@@ -22,6 +22,8 @@ import TicketPage from './components/TicketPage';
 import LandingPage from './components/LandingPage';
 
 
+import UserProfileModal from './components/UserProfileModal';
+
 const AuthGuard = ({ children }) => {
     const { state } = useAppState();
     return state.user ? children : <Navigate to="/login" />;
@@ -33,6 +35,7 @@ const Layout = ({ children }) => (
         <main className="main-content">
             {children}
         </main>
+        <UserProfileModal />
     </div>
 );
 

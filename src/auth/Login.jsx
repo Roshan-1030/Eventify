@@ -51,6 +51,7 @@ const Login = () => {
                         name: profile.name || user.displayName || profile.email?.split('@')[0] || "Admin",
                         role: profile.role || "admin",
                         email: profile.email || user.email,
+                        phone: profile.phone || "",
                         roomId: profile.room_id || profile.roomId || "ADM-GENERAL"
                     });
                     navigate('/');
@@ -77,6 +78,7 @@ const Login = () => {
             }
 
             const normalizedRoomId = roomId.trim().toUpperCase();
+            const normalizedEmail = studentEmail.trim().toLowerCase();
 
             try {
                 // 🔍 Verify Room Exists
@@ -89,36 +91,61 @@ const Login = () => {
                     return;
                 }
 
-                // 🔎 Check existing student record in this room
-                const studentQuery = query(
+                // 🔎 Check if profile already exists globally for this email
+                const emailQuery = query(
                     collection(db, "profiles"), 
-                    where("email", "==", studentEmail.trim().toLowerCase()), 
-                    where("room_id", "==", normalizedRoomId),
-                    where("role", "==", "student")
+                    where("email", "==", normalizedEmail)
                 );
-                const studentSnap = await getDocs(studentQuery);
+                const emailSnap = await getDocs(emailQuery);
                 
                 let studentData;
-                if (!studentSnap.empty) {
-                    // Update existing student
-                    const studentDoc = studentSnap.docs[0];
-                    await updateDoc(doc(db, "profiles", studentDoc.id), {
-                        name: studentName.trim(),
-                        branch: studentBranch,
-                        year: studentYear
-                    });
-                    studentData = { id: studentDoc.id, ...studentDoc.data(), name: studentName.trim(), branch: studentBranch, year: studentYear };
+                if (!emailSnap.empty) {
+                    const studentDoc = emailSnap.docs[0];
+                    const existing = studentDoc.data();
+
+                    if (existing.role === 'admin') {
+                        setError("This email is already registered as an Event Administrator. You cannot use it for a student profile.");
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Strict validation: An email can only be used for one profile!
+                    // Verify if the entered details match the existing registered profile
+                    const isNameMatch = existing.name && existing.name.trim().toLowerCase() === studentName.trim().toLowerCase();
+                    const isBranchMatch = !existing.branch || existing.branch.toLowerCase() === studentBranch.toLowerCase();
+                    const isYearMatch = !existing.year || existing.year.toLowerCase() === studentYear.toLowerCase();
+                    const isRoomMatch = !existing.room_id || existing.room_id.toUpperCase() === normalizedRoomId;
+
+                    if (!isNameMatch || !isBranchMatch || !isYearMatch || !isRoomMatch) {
+                        const mismatches = [];
+                        if (!isNameMatch) mismatches.push(`Full Name: "${existing.name}"`);
+                        if (!isBranchMatch) mismatches.push(`Branch: "${existing.branch}"`);
+                        if (!isYearMatch) mismatches.push(`Year: "${existing.year}"`);
+                        if (!isRoomMatch) mismatches.push(`Room ID: "${existing.room_id}"`);
+
+                        setError(`⚠️ Account Conflict: This email (${normalizedEmail}) is already registered to a profile with different details (${mismatches.join(', ')}). One email can only be used for one profile. Please use your exact registered details.`);
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Matching returning student: log in with existing profile data without creating duplicate or overwriting
+                    studentData = { 
+                        id: studentDoc.id, 
+                        ...existing, 
+                        email: normalizedEmail 
+                    };
                 } else {
-                    // Create new student record
+                    // Create new student record - First time this email is ever used
                     const studentId = `STU-${Date.now()}`;
                     studentData = {
                         id: studentId,
                         name: studentName.trim(),
-                        email: studentEmail.trim().toLowerCase(),
+                        email: normalizedEmail,
                         role: "student",
                         room_id: normalizedRoomId,
                         branch: studentBranch,
                         year: studentYear,
+                        phone: "",
                         createdAt: new Date()
                     };
                     await setDoc(doc(db, "profiles", studentId), studentData);
@@ -130,6 +157,7 @@ const Login = () => {
                     email: studentData.email,
                     branch: studentData.branch,
                     year: studentData.year,
+                    phone: studentData.phone || "",
                     role: 'student',
                     roomId: studentData.room_id
                 });
@@ -163,6 +191,7 @@ const Login = () => {
                     name: profile.name || user.displayName || profile.email?.split('@')[0] || "Admin",
                     role: profile.role || "admin",
                     email: profile.email || user.email,
+                    phone: profile.phone || "",
                     roomId: profile.room_id || profile.roomId || "ADM-GENERAL"
                 });
                 navigate('/');
@@ -170,9 +199,36 @@ const Login = () => {
                 setError("Google account authenticated, but no Admin profile found. Please register first.");
             }
         } catch (err) {
-            setError(err.message.replace("Firebase: ", ""));
+            if (err.code === "auth/unauthorized-domain") {
+                setError(`Domain (${window.location.hostname}) is not authorized in Firebase. Please add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+            } else {
+                setError(err.message.replace("Firebase: ", ""));
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleEmailBlur = async () => {
+        const trimmed = studentEmail.trim().toLowerCase();
+        if (!trimmed || !trimmed.includes('@')) return;
+        try {
+            const q = query(collection(db, "profiles"), where("email", "==", trimmed));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const existing = snap.docs[0].data();
+                if (existing.role === 'admin') {
+                    setError("ℹ️ Note: This email is registered as an Event Administrator. Please switch to Admin login.");
+                } else if (existing.role === 'student') {
+                    // Auto-fill existing profile details to assist student with exact registered information
+                    if (!studentName && existing.name) setStudentName(existing.name);
+                    if (!studentBranch && existing.branch) setStudentBranch(existing.branch);
+                    if (!studentYear && existing.year) setStudentYear(existing.year);
+                    if (!roomId && existing.room_id) setRoomId(existing.room_id);
+                }
+            }
+        } catch (e) {
+            // silent fallback
         }
     };
 
@@ -182,10 +238,30 @@ const Login = () => {
         try {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
+            const normalizedGoogleEmail = (user.email || '').trim().toLowerCase();
+            setStudentEmail(normalizedGoogleEmail);
             setStudentName(user.displayName || '');
-            setStudentEmail(user.email || '');
+
+            // Auto-populate existing profile details if this Google email is already registered
+            const q = query(collection(db, "profiles"), where("email", "==", normalizedGoogleEmail));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const existing = snap.docs[0].data();
+                if (existing.role === 'admin') {
+                    setError("ℹ️ Note: This Google account is registered as an Event Administrator. Please switch to Admin login.");
+                    return;
+                }
+                if (existing.name) setStudentName(existing.name);
+                if (existing.branch) setStudentBranch(existing.branch);
+                if (existing.year) setStudentYear(existing.year);
+                if (existing.room_id) setRoomId(existing.room_id);
+            }
         } catch (err) {
-            setError(err.message.replace("Firebase: ", ""));
+            if (err.code === "auth/unauthorized-domain") {
+                setError(`Domain (${window.location.hostname}) is not authorized in Firebase. Please add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+            } else {
+                setError(err.message.replace("Firebase: ", ""));
+            }
         }
     };
 
@@ -235,7 +311,18 @@ const Login = () => {
                             <div className="form-group"><input type="text" className="form-control" placeholder="Room ID (e.g. ADM-12345)" value={roomId} onChange={e => setRoomId(e.target.value)} required /></div>
                             <div className="form-group"><input type="text" className="form-control" placeholder="Full Name" value={studentName} onChange={e => setStudentName(e.target.value)} required /></div>
                             <div className="form-group" style={{ marginBottom: '0.25rem' }}>
-                                <input type="email" className="form-control" placeholder="Institutional Email" value={studentEmail} onChange={e => setStudentEmail(e.target.value)} required />
+                                <input 
+                                    type="email" 
+                                    className="form-control" 
+                                    placeholder="Institutional Email" 
+                                    value={studentEmail} 
+                                    onChange={e => setStudentEmail(e.target.value)} 
+                                    onBlur={handleEmailBlur}
+                                    required 
+                                />
+                                <small className="text-secondary" style={{ fontSize: '0.72rem', display: 'block', textAlign: 'left', marginTop: '3px' }}>
+                                    🔒 One email is bound to one profile. Returning students must use their registered details.
+                                </small>
                             </div>
                             <button type="button" onClick={handleStudentGoogleLogin} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', marginBottom: '1rem' }}>
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '12px' }} />

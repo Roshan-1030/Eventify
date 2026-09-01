@@ -5,7 +5,7 @@ import { db } from '../firebase/firebase';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 const Reports = () => {
-    const { state, setState } = useAppState();
+    const { state, setState, openUserProfile } = useAppState();
     const navigate = useNavigate();
 
     if (state.user?.role !== 'admin') {
@@ -56,10 +56,10 @@ const Reports = () => {
     };
 
     const handleExportCSV = () => {
-        let csvContent = "data:text/csv;charset=utf-8,Student Name,Email,Branch,Year,Registrations Count,Events List\n";
+        let csvContent = "data:text/csv;charset=utf-8,Student Name,Email,Phone,Branch,Year,Registrations Count,Events List\n";
         studentReport.forEach(s => {
             const eventTitles = s.registeredEvents.map(e => e.title).join("; ");
-            const row = `"${s.name}","${s.email || 'N/A'}","${s.branch || 'N/A'}","${s.year || 'N/A'}","${s.registeredEvents.length}","${eventTitles}"`;
+            const row = `"${s.name}","${s.email || 'N/A'}","${s.phone || 'N/A'}","${s.branch || 'N/A'}","${s.year || 'N/A'}","${s.registeredEvents.length}","${eventTitles}"`;
             csvContent += row + "\n";
         });
 
@@ -136,8 +136,17 @@ const Reports = () => {
                                 studentReport.map(s => (
                                     <tr key={s.id}>
                                         <td>
-                                            <div style={{ fontWeight: 800 }}>{s.name}</div>
-                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{s.email}</div>
+                                            <div 
+                                                className="clickable-user-name"
+                                                style={{ fontWeight: 800 }}
+                                                onClick={() => openUserProfile(s)}
+                                                title="Click to view student contact card & phone number"
+                                            >
+                                                {s.name} 👤
+                                            </div>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                                {s.email} {s.phone && `• 📱 ${s.phone}`}
+                                            </div>
                                         </td>
                                         <td>
                                             <div style={{ fontWeight: 700 }}>{s.branch || 'N/A'}</div>
