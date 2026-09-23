@@ -121,8 +121,8 @@ const Gallery = () => {
                             >
                                 {state.user?.role === 'admin' && (
                                     <button 
-                                        className="btn btn-xs btn-outline" 
-                                        style={{ position: 'absolute', top: '12px', right: '12px', color: 'var(--danger)', borderColor: 'var(--danger)' }} 
+                                        className="btn btn-xs btn-outline-danger" 
+                                        style={{ position: 'absolute', top: '12px', right: '12px', width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }} 
                                         onClick={async (e) => {
                                             e.stopPropagation();
                                             if (window.confirm(`Delete folder "${f.name}" and all its photos?`)) {
@@ -136,6 +136,7 @@ const Gallery = () => {
                                                 }));
                                             }
                                         }}
+                                        title="Delete album"
                                     >
                                         ✕
                                     </button>
@@ -208,9 +209,9 @@ const Gallery = () => {
             {isLightboxOpen && currentImg && (
                 <div className="lightbox-modal" onClick={() => setIsLightboxOpen(false)}>
                     <button 
-                        className="btn btn-outline btn-sm" 
-                        style={{ position: 'absolute', top: '20px', right: '20px', color: '#ffffff', borderColor: 'rgba(255,255,255,0.4)', borderRadius: '50%', width: '40px', height: '40px', padding: 0 }} 
+                        className="lightbox-close-btn" 
                         onClick={() => setIsLightboxOpen(false)}
+                        title="Close preview"
                     >
                         ✕
                     </button>
@@ -228,16 +229,18 @@ const Gallery = () => {
                     {folderImages.length > 1 && (
                         <>
                             <button 
-                                className="btn btn-primary" 
-                                style={{ position: 'absolute', left: '16px', borderRadius: '50%', width: '46px', height: '46px', padding: 0, fontSize: '1.2rem', zIndex: 10 }} 
+                                className="lightbox-nav-btn" 
+                                style={{ left: '16px' }} 
                                 onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((idx) => (idx - 1 + folderImages.length) % folderImages.length); }}
+                                title="Previous photo"
                             >
                                 ❮
                             </button>
                             <button 
-                                className="btn btn-primary" 
-                                style={{ position: 'absolute', right: '16px', borderRadius: '50%', width: '46px', height: '46px', padding: 0, fontSize: '1.2rem', zIndex: 10 }} 
+                                className="lightbox-nav-btn" 
+                                style={{ right: '16px' }} 
                                 onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((idx) => (idx + 1) % folderImages.length); }}
+                                title="Next photo"
                             >
                                 ❯
                             </button>

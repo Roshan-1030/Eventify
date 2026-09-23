@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
@@ -12,9 +12,17 @@ const AdminDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+    const isSubmittingRef = useRef(false);
     
-    // Stats calculation
-    const roomEvents = (state.events || []).filter(e => e.roomId === state.user.roomId);
+    // Stats calculation & deduplicated events for this room
+    const seenEventIds = new Set();
+    const roomEvents = (state.events || []).filter(e => {
+        if (e.roomId !== state.user.roomId) return false;
+        const key = String(e.id || e._id);
+        if (seenEventIds.has(key)) return false;
+        seenEventIds.add(key);
+        return true;
+    });
     
     // Calculate total unique registrations across all events in this room
     const registrationSet = new Set();
@@ -26,7 +34,6 @@ const AdminDashboard = () => {
     const totalRegistrations = registrationSet.size;
     const roomStudentsCount = (state.users || []).filter(u => u.role === 'student' && u.roomId === state.user.roomId).length;
     const roomFeedbacksCount = (state.feedbacks || []).filter(fb => fb.roomId === state.user.roomId).length;
-    const roomChatsCount = (state.chats || []).filter(c => c.roomId === state.user.roomId).length;
 
     // Distribution
     const categories = {};
@@ -70,18 +77,22 @@ const AdminDashboard = () => {
 
     const handleCreateEvent = async (e) => {
         e.preventDefault();
+        if (isSubmittingRef.current || loading) return;
+        isSubmittingRef.current = true;
         setError("");
         setLoading(true);
 
         if (!title || !date || !category || !time || !coordinator || !description) {
             setError("Please fill all required fields!");
             setLoading(false);
+            isSubmittingRef.current = false;
             return;
         }
 
         if (eventType === 'paid' && (!fee || Number(fee) <= 0)) {
             setError("Please specify a valid entry fee greater than 0 for a paid event!");
             setLoading(false);
+            isSubmittingRef.current = false;
             return;
         }
 
@@ -108,10 +119,15 @@ const AdminDashboard = () => {
 
             const docRef = await addDoc(collection(db, "events"), eventData);
             
-            setState(prev => ({
-                ...prev,
-                events: [{ ...eventData, id: docRef.id, _id: docRef.id }, ...(prev.events || [])]
-            }));
+            // Deduplicate in case onSnapshot already updated the events list
+            setState(prev => {
+                const alreadyExists = (prev.events || []).some(ev => String(ev.id) === String(docRef.id) || String(ev._id) === String(docRef.id));
+                if (alreadyExists) return prev;
+                return {
+                    ...prev,
+                    events: [{ ...eventData, id: docRef.id, _id: docRef.id }, ...(prev.events || [])]
+                };
+            });
             
             alert("✅ Event Launched Successfully!");
             setTitle(""); setDate(""); setCategory(""); setTime(""); setLocation(""); setCoordinator(""); setDescription(""); setImageBase64("");
@@ -122,6 +138,7 @@ const AdminDashboard = () => {
             setError(`Upload Failed: ${err.message.replace("Firebase: ", "")}`);
         } finally {
             setLoading(false);
+            isSubmittingRef.current = false;
         }
     };
 
@@ -141,21 +158,6 @@ const AdminDashboard = () => {
             reader.onloadend = () => setImageBase64(reader.result);
             reader.readAsDataURL(file);
         }
-    };
-
-    const clearRoomData = async (type) => {
-        if (!window.confirm(`Are you sure you want to PERMANENTLY clear all room ${type}?`)) return;
-        
-        try {
-            if (type === 'chats') {
-                const toDelete = (state.chats || []).filter(c => c.roomId === state.user.roomId);
-                for (let c of toDelete) await deleteDoc(doc(db, "chats", c.id));
-            } else if (type === 'feedbacks') {
-                const toDelete = (state.feedbacks || []).filter(c => c.roomId === state.user.roomId);
-                for (let c of toDelete) await deleteDoc(doc(db, "feedbacks", c.id));
-            }
-            alert(`Room ${type} cleared.`);
-        } catch(e) { console.error("Failed to clear data:", e); }
     };
 
     const handleShareRoom = () => {
@@ -195,9 +197,6 @@ const AdminDashboard = () => {
                     </div>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-outline btn-sm" onClick={() => navigate('/reports')}>
-                        📄 Full Report
-                    </button>
                     <button className="btn btn-primary btn-sm" onClick={() => setIsModalOpen(true)}>
                         + Create Event
                     </button>
@@ -207,68 +206,45 @@ const AdminDashboard = () => {
             {/* Stats Counter Grid */}
             <div className="stats-grid">
                 <div className="glass-panel stat-card">
-                    <div className="stat-number" style={{ color: 'var(--primary)' }}>{roomEvents.length}</div>
+                    <div className="stat-number">{roomEvents.length}</div>
                     <div className="stat-label">Events</div>
                 </div>
                 <div className="glass-panel stat-card">
-                    <div className="stat-number" style={{ color: 'var(--accent)' }}>{totalRegistrations}</div>
-                    <div className="stat-label">RSVPs Taken</div>
+                    <div className="stat-number">{totalRegistrations}</div>
+                    <div className="stat-label">Student Registrations</div>
                 </div>
                 <div className="glass-panel stat-card">
-                    <div className="stat-number" style={{ color: 'var(--success)' }}>{roomStudentsCount}</div>
+                    <div className="stat-number">{roomStudentsCount}</div>
                     <div className="stat-label">Enrolled Students</div>
                 </div>
                 <div className="glass-panel stat-card">
-                    <div className="stat-number" style={{ color: 'var(--text-primary)' }}>{roomFeedbacksCount}</div>
+                    <div className="stat-number">{roomFeedbacksCount}</div>
                     <div className="stat-label">Feedbacks</div>
                 </div>
             </div>
 
-            {/* Event Distribution & Maintenance Cards */}
-            <div className="grid grid-2 mb-8">
-                <div className="glass-panel">
-                    <h3>Event Categories</h3>
-                    <div className="mt-4 flex flex-col gap-4">
-                        {Object.entries(categories).length === 0 ? (
-                            <p className="text-secondary" style={{ margin: 0 }}>No events created yet.</p>
-                        ) : (
-                            Object.entries(categories).map(([name, count]) => {
-                                const percent = Math.round((count / Math.max(1, roomEvents.length)) * 100);
-                                return (
-                                    <div key={name}>
-                                        <div className="flex justify-between mb-1" style={{ fontSize: '0.88rem' }}>
-                                            <strong>{name}</strong>
-                                            <span style={{ color: 'var(--text-secondary)' }}>{count} ({percent}%)</span>
-                                        </div>
-                                        <div style={{ height: '8px', background: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${percent}%`, height: '100%', background: 'var(--primary-gradient)', borderRadius: '4px' }} />
-                                        </div>
+            {/* Event Distribution */}
+            <div className="glass-panel mb-8">
+                <h3>Event Categories</h3>
+                <div className="mt-4 flex flex-col gap-4">
+                    {Object.entries(categories).length === 0 ? (
+                        <p className="text-secondary" style={{ margin: 0 }}>No events created yet.</p>
+                    ) : (
+                        Object.entries(categories).map(([name, count]) => {
+                            const percent = Math.round((count / Math.max(1, roomEvents.length)) * 100);
+                            return (
+                                <div key={name}>
+                                    <div className="flex justify-between mb-1" style={{ fontSize: '0.88rem' }}>
+                                        <strong>{name}</strong>
+                                        <span style={{ color: 'var(--text-secondary)' }}>{count} ({percent}%)</span>
                                     </div>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-
-                <div className="glass-panel">
-                    <h3>Room Maintenance</h3>
-                    <p style={{ fontSize: '0.9rem', marginBottom: '1.25rem' }}>Quick administrative actions for current room.</p>
-                    <div className="flex flex-col gap-3">
-                        <button 
-                            className="btn btn-outline w-100" 
-                            style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} 
-                            onClick={() => clearRoomData('chats')}
-                        >
-                            🧹 Clear Room Chat ({roomChatsCount} messages)
-                        </button>
-                        <button 
-                            className="btn btn-outline w-100" 
-                            style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} 
-                            onClick={() => clearRoomData('feedbacks')}
-                        >
-                            🧹 Clear Room Feedback ({roomFeedbacksCount} reviews)
-                        </button>
-                    </div>
+                                    <div style={{ height: '8px', background: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${percent}%`, height: '100%', background: 'var(--primary-gradient)', borderRadius: '4px' }} />
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 

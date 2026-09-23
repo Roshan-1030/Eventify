@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
 import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { formatDate } from '../utils/dateUtils';
 
 const Feedback = () => {
     const { state, openUserProfile } = useAppState();
     const [content, setContent] = useState('');
+    const [clearing, setClearing] = useState(false);
     
     const roomFeedbacks = (state.feedbacks || [])
         .filter(f => f.roomId === state.user?.roomId)
@@ -31,6 +33,22 @@ const Feedback = () => {
         } catch(e) { console.error("Feedback failed:", e); }
     };
 
+    const handleClearAll = async () => {
+        if (state.user?.role !== 'admin') return;
+        if (!window.confirm("Are you sure you want to PERMANENTLY clear all feedback reviews in this room?")) return;
+        setClearing(true);
+        try {
+            const toDelete = (state.feedbacks || []).filter(f => f.roomId === state.user?.roomId);
+            for (let f of toDelete) {
+                if (f.id) await deleteDoc(doc(db, "feedbacks", f.id));
+            }
+        } catch (err) {
+            console.error("Failed to clear feedback:", err);
+        } finally {
+            setClearing(false);
+        }
+    };
+
     return (
         <div className="feedback-page">
             <div className="dashboard-header">
@@ -53,7 +71,7 @@ const Feedback = () => {
                                 placeholder="Tell us about what you loved or how events can be improved..." 
                                 value={content}
                                 onChange={e => setContent(e.target.value)}
-                                required
+                                required 
                             />
                         </div>
                         <button type="submit" className="btn btn-primary w-100 mt-2">Submit Feedback</button>
@@ -61,7 +79,19 @@ const Feedback = () => {
                 </div>
 
                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Recent Reviews ({roomFeedbacks.length})</h2>
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Recent Reviews ({roomFeedbacks.length})</h2>
+                        {state.user?.role === 'admin' && roomFeedbacks.length > 0 && (
+                            <button 
+                                className="btn btn-xs btn-outline-danger"
+                                onClick={handleClearAll}
+                                disabled={clearing}
+                                title="Clear all feedback reviews in this room"
+                            >
+                                {clearing ? 'Clearing...' : '🧹 Clear All'}
+                            </button>
+                        )}
+                    </div>
                     <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
                         {roomFeedbacks.length === 0 ? (
                             <p className="text-secondary text-center py-8">No feedback submitted in this room yet.</p>
@@ -82,18 +112,19 @@ const Feedback = () => {
                                                 <span className={`badge badge-${f.role}`} style={{ fontSize: '0.62rem' }}>{f.role}</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <small className="text-secondary" style={{ fontSize: '0.72rem' }}>{new Date(f.date).toLocaleDateString()}</small>
+                                                <small className="text-secondary" style={{ fontSize: '0.72rem' }}>{formatDate(f.date)}</small>
                                                 {state.user?.role === 'admin' && (
                                                     <button 
-                                                        className="btn btn-xs btn-outline" 
-                                                        style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.1rem 0.35rem', fontSize: '0.65rem' }} 
+                                                        className="btn btn-xs btn-outline-danger" 
+                                                        style={{ padding: '0.15rem 0.45rem', fontSize: '0.72rem' }} 
                                                         onClick={async () => {
                                                             if (window.confirm('Delete this feedback review?')) {
-                                                                try { await deleteDoc(doc(db, "feedbacks", f.id)); } catch(e) {}
+                                                                try { await deleteDoc(doc(db, "feedbacks", f.id)); } catch(e) { console.error(e); }
                                                             }
                                                         }}
+                                                        title="Delete this review"
                                                     >
-                                                        ✕
+                                                        🗑️ Delete
                                                     </button>
                                                 )}
                                             </div>

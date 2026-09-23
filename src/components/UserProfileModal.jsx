@@ -63,7 +63,7 @@ const UserProfileModal = () => {
                 {/* Header Banner */}
                 <div 
                     style={{ 
-                        background: role === 'admin' ? 'var(--primary-gradient)' : 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                        background: 'var(--primary)',
                         padding: '1.5rem 1.25rem 2.75rem',
                         color: '#ffffff',
                         position: 'relative',
@@ -71,23 +71,9 @@ const UserProfileModal = () => {
                     }}
                 >
                     <button 
-                        className="btn btn-sm" 
+                        className="modal-close-btn" 
                         onClick={closeUserProfile}
-                        style={{ 
-                            position: 'absolute', 
-                            top: '12px', 
-                            right: '12px', 
-                            background: 'rgba(0,0,0,0.2)', 
-                            border: 'none', 
-                            color: '#ffffff', 
-                            borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                        }}
+                        style={{ top: '12px', right: '12px' }}
                         aria-label="Close"
                     >
                         ✕

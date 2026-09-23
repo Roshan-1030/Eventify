@@ -9,102 +9,103 @@ const LandingPage = () => {
     if (state.user) return null;
 
     return (
-        <div style={{ maxWidth: '1080px', margin: '0 auto', paddingTop: '1rem' }}>
+        <div style={{ maxWidth: '1040px', margin: '0 auto', paddingTop: '1.5rem' }}>
             {/* Hero Section */}
-            <div className="glass-panel text-center" style={{ padding: 'clamp(2.5rem, 5vw, 4.5rem) clamp(1rem, 3vw, 2.5rem)', marginBottom: '2.5rem', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'var(--primary)', filter: 'blur(100px)', opacity: 0.08 }}></div>
+            <div className="glass-panel text-center" style={{ padding: 'clamp(2.5rem, 5vw, 4rem) 1.5rem', marginBottom: '2rem' }}>
+                <div className="badge badge-primary mb-3" style={{ fontSize: '0.78rem', padding: '0.3rem 0.85rem' }}>
+                    Campus Event Management Platform
+                </div>
                 
-                <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, marginBottom: '1.25rem' }}>
-                    Celebrate Every Moment with Eventify
+                <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', fontWeight: 800, marginBottom: '1rem', maxWidth: '800px', margin: '0 auto 1rem auto' }}>
+                    Coordinate campus events simply and reliably
                 </h1>
-                <p className="text-secondary" style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)', maxWidth: '680px', margin: '0 auto 2rem', lineHeight: '1.7' }}>
-                    The complete campus event management system. From tech fests to cultural nights, manage your university experience all in one place.
+                <p className="text-secondary" style={{ fontSize: 'clamp(1rem, 1.5vw, 1.15rem)', maxWidth: '640px', margin: '0 auto 2rem', lineHeight: '1.6' }}>
+                    The central hub for college fests, workshops, registrations, and student community interactions.
                 </p>
 
-                <div className="flex gap-3 justify-center flex-wrap mb-8">
-                    <button className="btn btn-primary" style={{ padding: '0.9rem 2.25rem', fontSize: '1.05rem' }} onClick={() => navigate('/register')}>
-                        Get Started Now
+                <div className="flex gap-3 justify-center flex-wrap mb-6">
+                    <button className="btn btn-primary" style={{ padding: '0.65rem 1.75rem', fontSize: '0.95rem' }} onClick={() => navigate('/register')}>
+                        Get Started
                     </button>
-                    <button className="btn btn-outline" style={{ padding: '0.9rem 2.25rem', fontSize: '1.05rem' }} onClick={() => navigate('/login')}>
-                        Login to Account
+                    <button className="btn btn-outline" style={{ padding: '0.65rem 1.75rem', fontSize: '0.95rem' }} onClick={() => navigate('/login')}>
+                        Log In
                     </button>
                 </div>
 
-                <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.25rem', background: 'rgba(37, 99, 235, 0.04)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <h4 style={{ color: 'var(--primary)', marginBottom: '0.35rem', fontSize: '1rem' }}>Our Mission</h4>
-                    <p style={{ fontSize: '0.88rem', margin: 0, opacity: 0.85, lineHeight: '1.6' }}>
-                        To bridge the gap between campus organizers and students with a seamless, digital-first experience that fosters community and participation.
+                <div style={{ maxWidth: '560px', margin: '0 auto', padding: '1rem 1.25rem', background: 'var(--primary-subtle)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--primary-border)' }}>
+                    <p style={{ fontSize: '0.85rem', margin: 0, color: 'var(--primary)', lineHeight: '1.5', fontWeight: 500 }}>
+                        💡 Create a room for your college or join an existing room with your campus Room ID.
                     </p>
                 </div>
             </div>
 
             {/* Why Choose Eventify */}
-            <div className="grid grid-2 mb-10">
-                <div className="glass-panel" style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem)' }}>
-                    <h2 style={{ marginBottom: '1rem', color: 'var(--primary)', fontSize: '1.35rem' }}>Digital Campus Revolution</h2>
-                    <p className="text-secondary" style={{ lineHeight: 1.8 }}>
-                        Eventify replaces messy messaging threads and paper registrations with a centralized hub for all campus activities. 
+            <div className="grid grid-2 mb-8">
+                <div className="glass-panel" style={{ padding: '1.75rem' }}>
+                    <h2 style={{ marginBottom: '0.75rem', fontSize: '1.25rem' }}>Digital Campus Coordination</h2>
+                    <p className="text-secondary" style={{ lineHeight: 1.7, fontSize: '0.92rem' }}>
+                        Eventify replaces scattered messaging groups and manual paper lists with a structured, centralized hub for all university activities.
                     </p>
-                    <p className="text-secondary mt-3" style={{ lineHeight: 1.8 }}>
-                        Whether it's a high-stakes hackathon or a club meeting, Eventify ensures every student has equal access to campus opportunities.
+                    <p className="text-secondary mt-3" style={{ lineHeight: 1.7, fontSize: '0.92rem' }}>
+                        From hackathons to cultural nights, manage registrations, schedules, and entry passes seamlessly.
                     </p>
                 </div>
-                <div className="glass-panel" style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem)' }}>
-                    <h2 style={{ marginBottom: '1rem', color: 'var(--accent)', fontSize: '1.35rem' }}>Unified Community</h2>
-                    <p className="text-secondary" style={{ lineHeight: 1.8 }}>
-                        We believe the best parts of college happen together. Eventify provides the tools to build community with discussion rooms, real-time announcements, and student feedback.
+                <div className="glass-panel" style={{ padding: '1.75rem' }}>
+                    <h2 style={{ marginBottom: '0.75rem', fontSize: '1.25rem' }}>Active Community</h2>
+                    <p className="text-secondary" style={{ lineHeight: 1.7, fontSize: '0.92rem' }}>
+                        Stay connected with real-time room announcements, interactive discussion channels, and quick polls.
                     </p>
-                    <p className="text-secondary mt-3" style={{ lineHeight: 1.8 }}>
-                        Our platform empowers student leaders to coordinate better and helps every participant feel valued.
+                    <p className="text-secondary mt-3" style={{ lineHeight: 1.7, fontSize: '0.92rem' }}>
+                        Every participant has direct access to coordinators and can voice feedback on completed events.
                     </p>
                 </div>
             </div>
 
             {/* Features Grid */}
-            <div className="grid grid-4 mb-10">
-                <div className="glass-panel text-center" style={{ padding: '1.75rem 1.25rem' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📅</div>
-                    <h3 style={{ fontSize: '1.15rem', marginBottom: '0.4rem' }}>Smart Events</h3>
-                    <p className="text-secondary" style={{ fontSize: '0.88rem', margin: 0 }}>Explore fests and workshops with simplified one-click RSVP.</p>
+            <div className="grid grid-4 mb-8">
+                <div className="glass-panel text-center" style={{ padding: '1.5rem 1rem' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📅</div>
+                    <h3 style={{ fontSize: '1.05rem', marginBottom: '0.35rem' }}>Events</h3>
+                    <p className="text-secondary" style={{ fontSize: '0.84rem', margin: 0 }}>Discover workshops and fests with quick registration.</p>
                 </div>
-                <div className="glass-panel text-center" style={{ padding: '1.75rem 1.25rem' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔖</div>
-                    <h3 style={{ fontSize: '1.15rem', marginBottom: '0.4rem' }}>Communities</h3>
-                    <p className="text-secondary" style={{ fontSize: '0.88rem', margin: 0 }}>Join circles and clubs to coordinate activities together.</p>
+                <div className="glass-panel text-center" style={{ padding: '1.5rem 1rem' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
+                    <h3 style={{ fontSize: '1.05rem', marginBottom: '0.35rem' }}>Communities</h3>
+                    <p className="text-secondary" style={{ fontSize: '0.84rem', margin: 0 }}>Join circles and student interest groups easily.</p>
                 </div>
-                <div className="glass-panel text-center" style={{ padding: '1.75rem 1.25rem' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🎟️</div>
-                    <h3 style={{ fontSize: '1.15rem', marginBottom: '0.4rem' }}>Secure Passes</h3>
-                    <p className="text-secondary" style={{ fontSize: '0.88rem', margin: 0 }}>Digital tickets with unique QR codes for verified campus entry.</p>
+                <div className="glass-panel text-center" style={{ padding: '1.5rem 1rem' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎟️</div>
+                    <h3 style={{ fontSize: '1.05rem', marginBottom: '0.35rem' }}>Passes</h3>
+                    <p className="text-secondary" style={{ fontSize: '0.84rem', margin: 0 }}>Digital entry tickets with instant QR verification.</p>
                 </div>
-                <div className="glass-panel text-center" style={{ padding: '1.75rem 1.25rem' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
-                    <h3 style={{ fontSize: '1.15rem', marginBottom: '0.4rem' }}>Live Polls</h3>
-                    <p className="text-secondary" style={{ fontSize: '0.88rem', margin: 0 }}>Voice your opinion in instant event surveys and live polls.</p>
+                <div className="glass-panel text-center" style={{ padding: '1.5rem 1rem' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
+                    <h3 style={{ fontSize: '1.05rem', marginBottom: '0.35rem' }}>Live Polls</h3>
+                    <p className="text-secondary" style={{ fontSize: '0.84rem', margin: 0 }}>Participate in live surveys and event voting.</p>
                 </div>
             </div>
 
             {/* Developer Section */}
-            <div className="glass-panel text-center" style={{ padding: '2.5rem 1.5rem', borderTop: '4px solid var(--primary)' }}>
-                <h2 style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>Meet the Developer</h2>
-                <div className="flex justify-center mb-4">
+            <div className="glass-panel text-center" style={{ padding: '2rem 1.5rem' }}>
+                <h2 style={{ marginBottom: '0.5rem', fontSize: '1.25rem' }}>Meet the Developer</h2>
+                <p className="text-secondary" style={{ maxWidth: '480px', margin: '0 auto 1.25rem', fontSize: '0.88rem' }}>
+                    Designed and engineered by Roshan to modernize college campus event coordination.
+                </p>
+                <div className="flex justify-center">
                     <a 
                         href="https://www.linkedin.com/in/roshan-462515387" 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="btn btn-primary" 
-                        style={{ padding: '0.8rem 2rem' }}
+                        className="btn btn-outline" 
+                        style={{ padding: '0.5rem 1.5rem', fontSize: '0.88rem' }}
                     >
-                        🔗 Connect on LinkedIn
+                        Connect on LinkedIn
                     </a>
                 </div>
-                <p className="text-secondary" style={{ maxWidth: '500px', margin: '0 auto', fontSize: '0.9rem' }}>
-                    Bringing college campus events into the digital age with modern automation and community tools.
-                </p>
             </div>
 
-            <p className="text-center text-secondary mt-8 mb-6" style={{ fontSize: '0.85rem' }}>
-                © 2026 Eventify System. Designed and Developed by Roshan.
+            <p className="text-center text-secondary mt-6 mb-6" style={{ fontSize: '0.82rem' }}>
+                © 2026 Eventify. Designed and Developed by Roshan.
             </p>
         </div>
     );

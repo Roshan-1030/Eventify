@@ -1,5 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { formatDate } from '../utils/dateUtils';
 
 const TicketModal = ({ event, payment, onClose }) => {
     if (!event || !payment) return null;
@@ -16,19 +17,6 @@ const TicketModal = ({ event, payment, onClose }) => {
                 position: 'relative',
                 background: 'var(--card-bg)'
             }}>
-                {/* Background Decor */}
-                <div style={{ 
-                    position: 'absolute', 
-                    top: '-50px', 
-                    right: '-50px', 
-                    width: '200px', 
-                    height: '200px', 
-                    background: 'var(--primary)', 
-                    filter: 'blur(100px)', 
-                    opacity: 0.3,
-                    zIndex: 0
-                }}></div>
-
                 <div className="ticket-content" style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', zIndex: 1, position: 'relative' }}>
                     {/* Left Side: Event Info */}
                     <div className="ticket-left" style={{ 
@@ -52,7 +40,7 @@ const TicketModal = ({ event, payment, onClose }) => {
                             <div className="ticket-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '2rem' }}>
                                 <div className="detail-item">
                                     <small style={{ opacity: 0.7, textTransform: 'uppercase', letterSpacing: '1px' }}>Date</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{event.date}</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{formatDate(event.date)}</div>
                                 </div>
                                 <div className="detail-item">
                                     <small style={{ opacity: 0.7, textTransform: 'uppercase', letterSpacing: '1px' }}>Time</small>

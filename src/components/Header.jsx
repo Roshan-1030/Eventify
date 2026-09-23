@@ -30,7 +30,7 @@ const Header = () => {
     const [viewedCounts, setViewedCounts] = useState({ announcements: 0, polls: 0 });
     const userRoomId = state.user?.roomId || '';
     const roomAnnouncementsCount = (state.announcements || []).filter(a => a.roomId === userRoomId).length;
-    const roomPollsCount = (state.polls || []).filter(p => p.roomId === userRoomId).length;
+    const roomPollsCount = (state.polls || []).filter(p => p.roomId === userRoomId && !p.groupId).length;
     const newAnnouncements = Math.max(0, roomAnnouncementsCount - viewedCounts.announcements);
     const newPolls = Math.max(0, roomPollsCount - viewedCounts.polls);
 
@@ -91,7 +91,7 @@ const Header = () => {
         { path: '/groups', icon: '👥', text: 'Communities', isPublic: false },
         { path: '/chat', icon: '💬', text: 'Discussion', isPublic: false },
         { path: '/gallery', icon: '🖼️', text: 'Gallery', isPublic: false },
-        { path: '/reports', icon: '📈', text: 'Reports', isPublic: false, isAdminOnly: true },
+        { path: '/payment', icon: '💳', text: 'Payments', isPublic: false },
         { path: '/#about', icon: 'ℹ️', text: 'About Room', isPublic: false },
         { path: '/#contact', icon: '📞', text: 'Contact Info', isPublic: false },
         { path: '/#feedback', icon: '⭐', text: 'Feedback', isPublic: false },
@@ -211,7 +211,7 @@ const Header = () => {
                                     </div>
                                     <ul style={{ listStyle: 'none', padding: '0.25rem 0', margin: 0 }}>
                                         <li>
-                                            <Link to="/profile" className="dropdown-item" onClick={closeAll} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                            <Link to="/profile" className="dropdown-item" onClick={closeAll} style={{ gap: '0.6rem' }}>
                                                 <span>👤</span> Manage Profile
                                             </Link>
                                         </li>
@@ -219,7 +219,7 @@ const Header = () => {
                                             <button 
                                                 className="dropdown-item" 
                                                 onClick={() => { toggleTheme(); }} 
-                                                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-primary)' }}
+                                                style={{ gap: '0.6rem' }}
                                             >
                                                 <span>{state.theme === 'dark' ? '🔆' : '🌙'}</span> {state.theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
                                             </button>
@@ -227,9 +227,9 @@ const Header = () => {
                                         <li><hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '0.4rem 0' }} /></li>
                                         <li>
                                             <button 
-                                                className="dropdown-item" 
+                                                className="dropdown-item dropdown-item-danger" 
                                                 onClick={() => { logout(); closeAll(); }} 
-                                                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 700 }}
+                                                style={{ gap: '0.6rem', fontWeight: 700 }}
                                             >
                                                 <span>🚪</span> Sign Out
                                             </button>
@@ -333,7 +333,7 @@ const Header = () => {
                                     <span>{state.theme === 'dark' ? '🔆' : '🌙'}</span>
                                     <span>{state.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                                 </span>
-                                <span className="badge badge-accent" style={{ fontSize: '0.6rem' }}>Theme</span>
+                                <span className="badge" style={{ fontSize: '0.65rem' }}>Theme</span>
                             </button>
 
                             {state.user && (

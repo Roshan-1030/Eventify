@@ -8,6 +8,7 @@ const Profile = () => {
     const [name, setName] = useState(state.user?.name || '');
     const [email, setEmail] = useState(state.user?.email || '');
     const [phone, setPhone] = useState(state.user?.phone || '');
+    const [roomId, setRoomId] = useState(state.user?.roomId || '');
     const [branch, setBranch] = useState(state.user?.branch || 'CSE');
     const [year, setYear] = useState(state.user?.year || '1st');
     const [success, setSuccess] = useState('');
@@ -20,6 +21,7 @@ const Profile = () => {
             setName(state.user.name || '');
             setEmail(state.user.email || '');
             setPhone(state.user.phone || '');
+            if (state.user.roomId) setRoomId(state.user.roomId);
             if (state.user.branch) setBranch(state.user.branch);
             if (state.user.year) setYear(state.user.year);
         }
@@ -44,13 +46,34 @@ const Profile = () => {
                 }
             }
 
+            // If student changed Room ID, verify that the new room exists
+            let targetRoomId = state.user?.roomId;
+            if (!isAdmin && roomId && roomId.trim().toUpperCase() !== (state.user?.roomId || '').toUpperCase()) {
+                const checkRoomId = roomId.trim().toUpperCase();
+                const roomQ = query(collection(db, "profiles"), where("room_id", "==", checkRoomId), where("role", "==", "admin"));
+                const roomSnap = await getDocs(roomQ);
+                if (roomSnap.empty) {
+                    setSuccess(`❌ Error: Room ID '${checkRoomId}' does not exist. Please check the code.`);
+                    setLoading(false);
+                    return;
+                }
+                const adminData = roomSnap.docs[0].data();
+                if (adminData.email && adminData.email.toLowerCase() === (state.user?.email || '').toLowerCase()) {
+                    setSuccess(`❌ Error: You are the Event Administrator of Room ${checkRoomId}. You cannot join your own room as a student.`);
+                    setLoading(false);
+                    return;
+                }
+                targetRoomId = checkRoomId;
+            }
+
             const userRef = doc(db, "profiles", state.user.id);
             const updatePayload = {
                 name: name.trim(),
                 email: normalizedEmail,
                 phone: phone.trim(),
                 branch,
-                year
+                year,
+                room_id: targetRoomId
             };
 
             await setDoc(userRef, updatePayload, { merge: true });
@@ -61,7 +84,8 @@ const Profile = () => {
                 email: email.trim(), 
                 phone: phone.trim(), 
                 branch, 
-                year 
+                year,
+                roomId: targetRoomId
             };
             setState(prev => ({ 
                 ...prev, 
@@ -69,7 +93,7 @@ const Profile = () => {
                 users: (prev.users || []).map(u => String(u.id) === String(state.user.id) ? { ...u, ...updatePayload } : u)
             }));
             
-            setSuccess('✅ Profile updated permanently! Other users can now see your updated details.');
+            setSuccess(`✅ Profile updated! ${targetRoomId !== state.user?.roomId ? `You have switched to Room ${targetRoomId}.` : 'Changes saved successfully.'}`);
         } catch (err) {
             console.error("Update failed", err);
             setSuccess(`❌ Error: ${err.message}`);
@@ -143,7 +167,14 @@ const Profile = () => {
                     </div>
 
                     {success && (
-                        <div className={`p-3 mb-4 rounded-lg font-bold text-white ${success.includes('✅') ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '0.85rem' }}>
+                        <div 
+                            className={`p-3 mb-4 rounded-lg font-bold text-white ${success.includes('✅') ? 'bg-success' : 'bg-danger'}`} 
+                            style={{ 
+                                fontSize: '0.88rem',
+                                backgroundColor: success.includes('✅') ? 'var(--success, #16a34a)' : '#dc2626',
+                                color: '#ffffff'
+                            }}
+                        >
                             {success}
                         </div>
                     )}
@@ -192,6 +223,28 @@ const Profile = () => {
                                 💡 When you add your phone number, other room members can view it and call/WhatsApp you by clicking your name anywhere in the app.
                             </small>
                         </div>
+
+                        {!isAdmin && (
+                            <div className="form-group" style={{ background: 'rgba(37, 99, 235, 0.04)', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(37, 99, 235, 0.18)' }}>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label style={{ fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+                                        🔑 Active Room ID
+                                    </label>
+                                    <span className="badge badge-outline" style={{ fontSize: '0.62rem' }}>Switch Room</span>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    value={roomId} 
+                                    onChange={e => setRoomId(e.target.value.toUpperCase())} 
+                                    placeholder="e.g. ADM-12345" 
+                                    required 
+                                />
+                                <small className="text-secondary" style={{ fontSize: '0.74rem', marginTop: '0.35rem', display: 'block' }}>
+                                    💡 Want to access events from another room? You can change your Room ID here anytime to switch rooms.
+                                </small>
+                            </div>
+                        )}
 
                         {!isAdmin && (
                             <div className="grid grid-2 gap-3">

@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import { QRCodeSVG } from 'qrcode.react';
+import { formatDate } from '../utils/dateUtils';
 
 const TicketPage = () => {
     const { paymentId } = useParams();
@@ -63,7 +64,7 @@ const TicketPage = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
                                 <div>
                                     <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, fontSize: '0.68rem', display: 'block', marginBottom: '2px' }}>Date</small>
-                                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff' }}>{event.date}</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff' }}>{formatDate(event.date)}</div>
                                 </div>
                                 <div>
                                     <small style={{ opacity: 0.75, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, fontSize: '0.68rem', display: 'block', marginBottom: '2px' }}>Time</small>

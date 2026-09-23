@@ -5,13 +5,13 @@ import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
 import { doc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { formatDate, toInputDateFormat } from '../utils/dateUtils';
 
 const EventCard = ({ event }) => {
     const { state, setState, openUserProfile } = useAppState();
     const navigate = useNavigate();
     const [showAttendees, setShowAttendees] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [showPayments, setShowPayments] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const [selectedScreenshot, setSelectedScreenshot] = useState(null);
 
@@ -136,7 +136,7 @@ const EventCard = ({ event }) => {
         setEditData({
             ...event,
             title: event.title || '',
-            date: event.date || '',
+            date: toInputDateFormat(event.date),
             description: event.description || event.desc || '',
             isPaid: isPaidEvent,
             fee: event.fee && Number(event.fee) > 0 ? String(event.fee) : '50',
@@ -239,7 +239,7 @@ const EventCard = ({ event }) => {
                     }} 
                 />
                 <div className="event-category-badge">{event.category || 'General'}</div>
-                <div className="event-date-badge">{new Date(event.date).toLocaleDateString()}</div>
+                <div className="event-date-badge">{formatDate(event.date)}</div>
                 {!event.registrationOpen && (
                     <div className="badge badge-danger" style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10, fontSize: '0.68rem' }}>
                         CLOSED
@@ -301,7 +301,7 @@ const EventCard = ({ event }) => {
                     )}
 
                     {isAdmin && isPaidEvent && (
-                        <button className="btn btn-primary btn-sm" onClick={() => setShowPayments(true)}>
+                        <button className="btn btn-primary btn-sm" onClick={() => navigate(`/payment/${event.id}`)}>
                             💸 Payments ({eventPayments.length})
                         </button>
                     )}
@@ -309,11 +309,8 @@ const EventCard = ({ event }) => {
 
                 {isAdmin && (
                     <div className="event-admin-controls">
-                        <button className="btn btn-xs btn-outline admin-btn" onClick={handleToggleRegistration}>
-                            {event.registrationOpen ? "🔒 Close" : "🔓 Open"}
-                        </button>
                         <button className="btn btn-xs btn-outline admin-btn" onClick={() => setShowAttendees(true)}>
-                            👥 {uniqueAttendees.length} RSVPs
+                            👥 {uniqueAttendees.length} Students
                         </button>
                         <button className="btn btn-xs btn-outline admin-btn" onClick={handleOpenEditModal}>
                             ✏️ Edit
@@ -335,7 +332,7 @@ const EventCard = ({ event }) => {
                 <div className="modal-overlay" onClick={() => setShowAttendees(false)}>
                     <div className="glass-panel modal-content-panel" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
-                            <h2 style={{ margin: 0 }}>Event RSVPs ({uniqueAttendees.length})</h2>
+                            <h2 style={{ margin: 0 }}>Students ({uniqueAttendees.length})</h2>
                             <button className="btn btn-sm btn-outline" style={{ borderRadius: '50%', width: '32px', height: '32px', padding: 0 }} onClick={() => setShowAttendees(false)}>✕</button>
                         </div>
                         <div className="flex flex-col gap-2" style={{ maxHeight: '350px', overflowY: 'auto' }}>
@@ -355,89 +352,6 @@ const EventCard = ({ event }) => {
                                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{student.email}</div>
                                     </div>
                                 ))
-                            )}
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {/* Payments Verification Modal */}
-            {showPayments && createPortal(
-                <div className="modal-overlay" onClick={() => setShowPayments(false)}>
-                    <div className="glass-panel modal-content-panel" style={{ maxWidth: '820px' }} onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4">
-                            <div>
-                                <h2 style={{ margin: 0 }}>Payment Verification</h2>
-                                <p className="text-secondary" style={{ margin: 0, fontSize: '0.85rem' }}>{event.title}</p>
-                            </div>
-                            <button className="btn btn-sm btn-outline" style={{ borderRadius: '50%', width: '32px', height: '32px', padding: 0 }} onClick={() => setShowPayments(false)}>✕</button>
-                        </div>
-
-                        <div className="table-container">
-                            {eventPayments.length === 0 ? (
-                                <div className="text-center p-8 text-secondary">No payments submitted for this event yet.</div>
-                            ) : (
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Student</th>
-                                            <th>Amount</th>
-                                            <th>Proof</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {eventPayments.map(p => (
-                                            <tr key={p.id}>
-                                                <td>
-                                                    <strong 
-                                                        className="clickable-user-name"
-                                                        onClick={() => openUserProfile({ id: p.userId, name: p.userName })}
-                                                        title="Click to view contact profile & phone number"
-                                                    >
-                                                        {p.userName} 👤
-                                                    </strong>
-                                                </td>
-                                                <td>₹{p.amount || '0'}</td>
-                                                <td>
-                                                    {p.screenshot ? (
-                                                        <div 
-                                                            style={{ width: '50px', height: '36px', background: '#eee', borderRadius: '4px', cursor: 'pointer', overflow: 'hidden' }} 
-                                                            onClick={() => setSelectedScreenshot(p.screenshot)}
-                                                        >
-                                                            <img src={p.screenshot} alt="Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-secondary text-xs">None</span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <span className={`badge badge-${p.status === 'verified' ? 'success' : (p.status === 'rejected' ? 'danger' : 'accent')}`}>
-                                                        {p.status.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div className="flex gap-1 items-center flex-wrap">
-                                                        {!p.ticketIssued && p.status === 'verified' && (
-                                                            <button className="btn btn-primary btn-xs" onClick={() => handleIssueTicket(p.id)}>
-                                                                🎟️ Issue Ticket
-                                                            </button>
-                                                        )}
-                                                        {p.ticketIssued && <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>ISSUED</span>}
-                                                        {!p.ticketIssued && (
-                                                            <>
-                                                                <button className="btn btn-success btn-xs" onClick={() => handleUpdatePaymentStatus(p.id, 'verified')}>✓</button>
-                                                                <button className="btn btn-danger btn-xs" onClick={() => handleUpdatePaymentStatus(p.id, 'rejected')}>✕</button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
                             )}
                         </div>
                     </div>

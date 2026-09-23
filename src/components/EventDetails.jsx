@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { formatDate } from '../utils/dateUtils';
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -57,7 +58,22 @@ const EventDetails = () => {
         }));
         alert("🎉 Registration Successful!");
     };
+
+    const handleToggleRegistration = async () => {
+        if (state.user?.role !== 'admin') return;
+        const newStatus = !event.registrationOpen;
+        try {
+            await updateDoc(doc(db, "events", String(event.id)), { registrationOpen: newStatus });
+        } catch(e) {
+            console.warn("Failed to toggle registration on cloud:", e);
+        }
+        setState(prev => ({
+            ...prev,
+            events: prev.events.map(ev => String(ev.id) === String(event.id) ? { ...ev, registrationOpen: newStatus } : ev)
+        }));
+    };
     
+    const eventPayments = (state.payments || []).filter(p => String(p.eventId) === String(event?.id));
     const uniqueAttendeesCount = new Set((event.attendees || []).map(a => String(a.id || a.email))).size;
 
     return (
@@ -82,7 +98,7 @@ const EventDetails = () => {
                         <span className="badge badge-success mb-2" style={{ fontSize: '0.75rem' }}>{event.category || 'Event'}</span>
                         <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', margin: '0 0 0.4rem 0' }}>{event.title}</h1>
                         <p style={{ color: 'rgba(255, 255, 255, 0.9)', margin: 0, fontSize: '0.85rem' }}>
-                            📍 {event.location || 'Campus'} &nbsp;|&nbsp; 📅 {event.date} &nbsp;|&nbsp; ⏰ {event.time || 'All Day'}
+                            📍 {event.location || 'Campus'} &nbsp;|&nbsp; 📅 {formatDate(event.date)} &nbsp;|&nbsp; ⏰ {event.time || 'All Day'}
                         </p>
                     </div>
                 </div>
@@ -126,7 +142,7 @@ const EventDetails = () => {
                                     <strong>{isPaidEvent ? `₹${event.fee}` : 'Free'}</strong>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-secondary">RSVPs:</span>
+                                    <span className="text-secondary">Registered Students:</span>
                                     <strong>{uniqueAttendeesCount} enrolled</strong>
                                 </div>
                             </div>
@@ -183,9 +199,53 @@ const EventDetails = () => {
                                 </div>
                             )}
 
+                            {/* Admin Actions */}
+                            {state.user?.role === 'admin' && (
+                                <div className="mt-4 pt-4 border-top flex flex-col gap-2">
+                                    <h4 style={{ fontSize: '0.88rem', margin: '0 0 0.25rem 0', color: 'var(--text-secondary)' }}>Admin Management</h4>
+                                    
+                                    {/* Report Section Button */}
+                                    <button 
+                                        className="btn btn-primary w-100" 
+                                        onClick={() => navigate(`/reports/${event.id}`)}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700 }}
+                                    >
+                                        📊 View Event Report
+                                    </button>
+
+                                    {/* Close Event Section Button */}
+                                    <button 
+                                        className={`btn w-100 ${event.registrationOpen ? 'btn-outline' : 'btn-success'}`}
+                                        onClick={handleToggleRegistration}
+                                        style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            gap: '0.5rem',
+                                            fontWeight: 700,
+                                            color: event.registrationOpen ? 'var(--danger)' : '#ffffff',
+                                            borderColor: event.registrationOpen ? 'var(--danger)' : 'transparent'
+                                        }}
+                                    >
+                                        {event.registrationOpen ? "🔒 Close Event (Stop Registrations)" : "🔓 Re-Open Event (Accept Registrations)"}
+                                    </button>
+
+                                    {/* Payment Section Button */}
+                                    {isPaidEvent && (
+                                        <button 
+                                            className="btn btn-outline w-100" 
+                                            onClick={() => navigate(`/payment/${event.id}`)}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+                                        >
+                                            💳 Payment Verification ({eventPayments.length})
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Admin QR Info - Shown only for Paid Events */}
                             {state.user?.role === 'admin' && isPaidEvent && (
-                                <div className="mt-4 pt-4 border-top">
+                                <div className="mt-3 pt-3 border-top">
                                     <h4 style={{ color: 'var(--primary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Payment QR</h4>
                                     <div className="flex items-center gap-3 p-3 rounded" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
                                         {event.qrUrl ? (

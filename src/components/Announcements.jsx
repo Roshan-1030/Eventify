@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
 import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { formatDateTime } from '../utils/dateUtils';
 
 const Announcements = () => {
     const { state, openUserProfile } = useAppState();
@@ -148,7 +149,7 @@ const Announcements = () => {
                                         <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>✨ New</span>
                                     )}
                                     <small className="text-secondary" style={{ fontSize: '0.75rem' }}>
-                                        {new Date(a.date).toLocaleDateString()} at {new Date(a.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {formatDateTime(a.date)}
                                         {a.author && (
                                             <span> • Posted by <span 
                                                 className="clickable-user-name" 

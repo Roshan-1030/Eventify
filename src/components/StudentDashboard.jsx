@@ -11,7 +11,14 @@ const StudentDashboard = () => {
     const [copied, setCopied] = useState(false);
     
     const userRoomId = state.user?.roomId || '';
-    const roomEvents = (state.events || []).filter(e => e.roomId === userRoomId);
+    const seenEventIds = new Set();
+    const roomEvents = (state.events || []).filter(e => {
+        if (e.roomId !== userRoomId) return false;
+        const key = String(e.id || e._id);
+        if (seenEventIds.has(key)) return false;
+        seenEventIds.add(key);
+        return true;
+    });
     const roomStudentsCount = (state.users || []).filter(u => u.role === 'student' && u.roomId === userRoomId).length;
 
     // Categories found in room events
@@ -58,7 +65,7 @@ const StudentDashboard = () => {
                                 {copied ? '✅ Link Copied!' : '🔗 Share Link'}
                             </button>
                         )}
-                        <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
+                        <span className="badge" style={{ fontSize: '0.75rem' }}>
                             👥 {roomStudentsCount} Students
                         </span>
                     </div>

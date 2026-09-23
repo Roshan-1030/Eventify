@@ -100,6 +100,7 @@ const App = () => {
                 <Route path="/announcements" element={<AuthGuard><Layout><Announcements /></Layout></AuthGuard>} />
                 <Route path="/chat" element={<AuthGuard><Layout><Chat /></Layout></AuthGuard>} />
                 <Route path="/reports" element={<AuthGuard><Layout><Reports /></Layout></AuthGuard>} />
+                <Route path="/reports/:eventId" element={<AuthGuard><Layout><Reports /></Layout></AuthGuard>} />
 
                 <Route path="/gallery" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
                 <Route path="/gallery/:folderId" element={<AuthGuard><Layout><Gallery /></Layout></AuthGuard>} />
@@ -110,6 +111,7 @@ const App = () => {
                 <Route path="/groups/:groupId" element={<AuthGuard><Layout><Groups /></Layout></AuthGuard>} />
 
                 <Route path="/event/:id" element={<AuthGuard><Layout><EventDetails /></Layout></AuthGuard>} />
+                <Route path="/payment" element={<AuthGuard><Layout><Payment /></Layout></AuthGuard>} />
                 <Route path="/payment/:eventId" element={<AuthGuard><Layout><Payment /></Layout></AuthGuard>} />
                 <Route path="/profile" element={<AuthGuard><Layout><Profile /></Layout></AuthGuard>} />
                 <Route path="/ticket/:paymentId" element={<AuthGuard><Layout><TicketPage /></Layout></AuthGuard>} />

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../context/StateContext';
 import { db } from '../firebase/firebase';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const Chat = () => {
     const { state, openUserProfile } = useAppState();
     const [msg, setMsg] = useState('');
+    const [clearing, setClearing] = useState(false);
     const chatRef = useRef(null);
 
     const roomChats = (state.chats || [])
@@ -52,6 +53,34 @@ const Chat = () => {
         } catch(e) { console.log("Failed to toggle mute:", e); }
     };
 
+    const handleClearChat = async () => {
+        if (!isAdmin) return;
+        if (!window.confirm("Are you sure you want to PERMANENTLY clear all messages in this room chat?")) return;
+        setClearing(true);
+        try {
+            const toDelete = (state.chats || []).filter(c => c.roomId === state.user?.roomId);
+            for (let c of toDelete) {
+                if (c.id) {
+                    await deleteDoc(doc(db, "chats", c.id));
+                }
+            }
+        } catch (err) {
+            console.error("Failed to clear chat:", err);
+        } finally {
+            setClearing(false);
+        }
+    };
+
+    const handleDeleteSingleMessage = async (msgId) => {
+        if (!isAdmin) return;
+        if (!window.confirm("Delete this message?")) return;
+        try {
+            await deleteDoc(doc(db, "chats", msgId));
+        } catch (err) {
+            console.error("Failed to delete message:", err);
+        }
+    };
+
     return (
         <div className="chat-container">
             <div className="dashboard-header" style={{ marginBottom: '1.25rem' }}>
@@ -62,9 +91,19 @@ const Chat = () => {
                     </p>
                 </div>
                 {isAdmin && (
-                    <button className={`btn btn-sm ${isGlobalMuted ? 'btn-success' : 'btn-outline'}`} onClick={toggleGlobalMute}>
-                        {isGlobalMuted ? '🔊 Unmute Room' : '🔇 Mute Room'}
-                    </button>
+                    <div className="flex gap-2">
+                        <button className={`btn btn-sm ${isGlobalMuted ? 'btn-success' : 'btn-outline'}`} onClick={toggleGlobalMute}>
+                            {isGlobalMuted ? '🔊 Unmute Room' : '🔇 Mute Room'}
+                        </button>
+                        <button 
+                            className="btn btn-sm btn-outline-danger" 
+                            onClick={handleClearChat}
+                            disabled={clearing || roomChats.length === 0}
+                            title="Clear all messages in this room"
+                        >
+                            {clearing ? 'Clearing...' : '🧹 Clear Chat'}
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -77,7 +116,7 @@ const Chat = () => {
                     ) : (
                         roomChats.map((c, i) => (
                             <div 
-                                key={i} 
+                                key={c.id || i} 
                                 className="mb-3" 
                                 style={{ 
                                     borderLeft: c.userId === state.user.id ? '3px solid var(--primary)' : '3px solid transparent', 
@@ -86,16 +125,28 @@ const Chat = () => {
                                     borderRadius: '0 8px 8px 0'
                                 }}
                             >
-                                <div className="flex items-baseline gap-2 mb-1">
-                                    <strong 
-                                        className="clickable-user-name" 
-                                        style={{ fontSize: '0.85rem', color: c.userId === state.user.id ? 'var(--primary)' : 'inherit' }}
-                                        onClick={() => openUserProfile({ id: c.userId, name: c.userName })}
-                                        title="Click to view contact profile & phone number"
-                                    >
-                                        {c.userId === state.user.id ? 'You' : c.userName} 👤
-                                    </strong>
-                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', opacity: 0.7 }}>{c.time}</span>
+                                <div className="flex items-baseline justify-between gap-2 mb-1">
+                                    <div className="flex items-baseline gap-2">
+                                        <strong 
+                                            className="clickable-user-name" 
+                                            style={{ fontSize: '0.85rem', color: c.userId === state.user.id ? 'var(--primary)' : 'inherit' }}
+                                            onClick={() => openUserProfile({ id: c.userId, name: c.userName })}
+                                            title="Click to view contact profile & phone number"
+                                        >
+                                            {c.userId === state.user.id ? 'You' : c.userName} 👤
+                                        </strong>
+                                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', opacity: 0.7 }}>{c.time}</span>
+                                    </div>
+                                    {isAdmin && (
+                                        <button 
+                                            className="btn btn-xs btn-outline-danger"
+                                            style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem' }}
+                                            onClick={() => handleDeleteSingleMessage(c.id)}
+                                            title="Delete this message"
+                                        >
+                                            🗑️
+                                        </button>
+                                    )}
                                 </div>
                                 <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: '1.45', wordBreak: 'break-word' }}>
                                     {c.text}
